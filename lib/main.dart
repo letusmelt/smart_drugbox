@@ -1,3 +1,4 @@
+import 'model_picker.dart';
 import 'press_button.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'medicine.dart';
@@ -202,7 +203,9 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 18),
+              const ModelPicker(),
+              const SizedBox(height: 18),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 22,
@@ -503,7 +506,10 @@ class _CapturePageState extends State<CapturePage> {
           .post(
             Uri.parse('$base/recognize'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'image': base64Encode(photo!)}),
+            body: jsonEncode({
+              'image': base64Encode(photo!),
+              'model': recognitionModel.value,
+            }),
           )
           .timeout(const Duration(seconds: 100));
       final result =
@@ -565,6 +571,8 @@ class _CapturePageState extends State<CapturePage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              ModelPicker(enabled: !busy),
+              const SizedBox(height: 16),
               Container(
                 height: 365,
                 clipBehavior: Clip.antiAlias,

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Smart Drugbox</string>
+	<string>安心药箱</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -43,22 +43,10 @@
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
-					<key>NSCameraUsageDescription</key>
-	<string>拍摄处方以识别和整理用药信息</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>选择处方照片以识别和整理用药信息</string>
-</dict>
+				</dict>
 			</array>
-			<key>NSCameraUsageDescription</key>
-	<string>拍摄处方以识别和整理用药信息</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>选择处方照片以识别和整理用药信息</string>
-</dict>
-		<key>NSCameraUsageDescription</key>
-	<string>拍摄处方以识别和整理用药信息</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>选择处方照片以识别和整理用药信息</string>
-</dict>
+		</dict>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -82,5 +70,12 @@
 	<string>拍摄处方以识别和整理用药信息</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>选择处方照片以识别和整理用药信息</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>连接同一 Wi-Fi 下电脑上的处方识别服务，并支持开发调试。</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

@@ -1,3 +1,4 @@
+import 'period_picker.dart';
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -553,8 +554,17 @@ class _TodayPageState extends State<TodayPage> {
       selected = null;
     }
     final events = widget.store.events.where((e) => e['day'] == today).toList();
-    final times = events.map((e) => e['minute'] as int).toSet().toList()
-      ..sort();
+    final planApplies =
+        widget.store.start != null &&
+        widget.store.start!.compareTo(today) <= 0 &&
+        (widget.store.end == null || widget.store.end!.compareTo(today) >= 0);
+    final times = <int>{
+      ...events.map((e) => e['minute'] as int),
+      if (planApplies)
+        ...widget.store.plan.expand(
+          (row) => (row['times'] as List).cast<int>(),
+        ),
+    }.toList()..sort();
     if (!times.contains(selected)) {
       final now = DateTime.now();
       final minute = now.hour * 60 + now.minute;
@@ -601,30 +611,16 @@ class _TodayPageState extends State<TodayPage> {
           '${DateTime.now().month} 月 ${DateTime.now().day} 日 · 短按听说明，按住 1 秒确认服用',
         ),
         if (times.isNotEmpty)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final t in times)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: ChoiceChip(
-                      label: Text(
-                        clockText(t),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      selected: selected == t,
-                      onSelected: (_) {
-                        tts.stop();
-                        setState(() {
-                          selected = t;
-                          spoken = null;
-                        });
-                      },
-                    ),
-                  ),
-              ],
-            ),
+          PeriodPicker(
+            times: times,
+            selected: selected!,
+            onSelected: (time) {
+              tts.stop();
+              setState(() {
+                selected = time;
+                spoken = null;
+              });
+            },
           ),
         const SizedBox(height: 16),
         if (times.isEmpty)
@@ -645,7 +641,9 @@ class _TodayPageState extends State<TodayPage> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              '本次 $count / ${current.length} 项已确认',
+              current.isEmpty
+                  ? '此时段仅供查看，今天未生成服用任务'
+                  : '本次 $count / ${current.length} 项已确认',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
@@ -660,9 +658,16 @@ class _TodayPageState extends State<TodayPage> {
               final name =
                   e?['name'] ??
                   (planned.isEmpty ? '未设置药品' : planned.first['name']);
+              final preview =
+                  e == null &&
+                  planApplies &&
+                  planned.isNotEmpty &&
+                  (planned.first['times'] as List).contains(selected);
               final taken = e?['taken'] != null;
               final text = e == null
-                  ? '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
+                  ? preview
+                        ? '$name，${boxNames[slot]}${slot + 1}号药格。这个时间在今天的安排启用之前，仅供查看，无需补服。'
+                        : '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
                   : '${e['name']}，${boxNames[slot]}${slot + 1}号药格，${e['dose']}，${e['method']}。${taken ? '本次已确认服用，请勿重复服用。' : ''}';
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -671,6 +676,7 @@ class _TodayPageState extends State<TodayPage> {
                   slot: slot,
                   name: name,
                   dose: e?['dose'],
+                  inactiveLabel: preview ? '安排启用前 · 仅供查看' : null,
                   taken: taken,
                   scheduled: e != null,
                   onTap: () => speak(text),
@@ -714,6 +720,7 @@ class DoseTile extends StatefulWidget {
   final int slot;
   final String name;
   final String? dose;
+  final String? inactiveLabel;
   final bool taken, scheduled;
   final VoidCallback onTap;
   final VoidCallback? onHold;
@@ -722,6 +729,7 @@ class DoseTile extends StatefulWidget {
     required this.slot,
     required this.name,
     this.dose,
+    this.inactiveLabel,
     required this.taken,
     required this.scheduled,
     required this.onTap,
@@ -814,7 +822,7 @@ class _DoseTileState extends State<DoseTile>
                         ? '✓ 已确认服用'
                         : widget.scheduled
                         ? widget.dose!
-                        : '本次不用服用',
+                        : widget.inactiveLabel ?? '本次不用服用',
                     style: TextStyle(
                       fontSize: 14,
                       color: foreground,

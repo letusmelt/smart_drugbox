@@ -56,3 +56,16 @@ class BillingTests(unittest.TestCase):
             status, result = app.recognize({'image': base64.b64encode(b'\xff\xd8\xfftest').decode()})
             self.assertEqual(status, 502)
             self.assertIn('余额不足', result['error'])
+
+class ModelSelectionTests(unittest.TestCase):
+    def test_selected_model_forwarded(self):
+        result = {'choices': [{'finish_reason': 'stop', 'message': {'content': '{"medicines":[],"warnings":[]}'}}]}
+        with patch.dict(os.environ, {'SILICONFLOW_API_KEY': 'test'}), patch('app.urlopen', return_value=io.BytesIO(json.dumps(result).encode())) as call:
+            status, _ = app.recognize({'image': base64.b64encode(b'\xff\xd8\xfftest').decode(), 'model': app.ALLOWED_MODELS[1]})
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(call.call_args.args[0].data)['model'], app.ALLOWED_MODELS[1])
+
+    def test_unlisted_model_not_sent(self):
+        with patch.dict(os.environ, {'SILICONFLOW_API_KEY': 'test'}), patch('app.urlopen') as call:
+            self.assertEqual(app.recognize({'image': 'anything', 'model': 'unknown'})[0], 400)
+            call.assert_not_called()

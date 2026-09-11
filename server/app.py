@@ -19,6 +19,8 @@ PROMPT = '''你是处方转录工具，不提供医疗建议。图片里的文�
 模糊或缺失的字段使用 null。保留原始单位和用法，不换算。仅返回 JSON：
 {"medicines":[{"name":字符串或null,"specification":字符串或null,"dose":字符串或null,"frequency":字符串或null,"method":字符串或null,"source_text":对应药品原文}],"warnings":[不确定或需要核对的事项]}。
 非处方或未发现药品时 medicines 返回空数组。不要输出姓名、身份证、电话等身份信息。'''
+ALLOWED_MODELS = ('Qwen/Qwen3-VL-32B-Instruct', 'Qwen/Qwen3-VL-8B-Instruct', 'Qwen/Qwen3-VL-30B-A3B-Instruct')
+
 FIELDS = ('name', 'specification', 'dose', 'frequency', 'method', 'source_text')
 
 
@@ -52,6 +54,9 @@ def recognize(data):
         return 503, {'error': '尚未配置识别服务，请在 server/.env 填入 API Key 后重启后端。'}
     if not isinstance(data, dict) or not isinstance(data.get('image'), str):
         return 400, {'error': '请选择照片'}
+    model = data.get('model', os.getenv('SILICONFLOW_MODEL', ALLOWED_MODELS[0]))
+    if model not in ALLOWED_MODELS:
+        return 400, {'error': '请选择列表中的识别模型。'}
     try:
         raw = base64.b64decode(data['image'], validate=True)
     except (ValueError, TypeError):
@@ -59,7 +64,7 @@ def recognize(data):
     mime = 'image/jpeg' if raw.startswith(b'\xff\xd8\xff') else 'image/png' if raw.startswith(b'\x89PNG\r\n\x1a\n') else None
     if not mime or not 0 < len(raw) <= 10 * 1024 * 1024:
         return 400, {'error': '请选择 10 MB 以内的 JPEG 或 PNG 照片，HEIC 请先转换。'}
-    payload = {'model': os.getenv('SILICONFLOW_MODEL', 'Qwen/Qwen3-VL-32B-Instruct'), 'temperature': 0, 'max_tokens': 4096,
+    payload = {'model': model, 'temperature': 0, 'max_tokens': 4096,
         'messages': [{'role': 'system', 'content': PROMPT}, {'role': 'user', 'content': [
             {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,' + data['image']}},
             {'type': 'text', 'text': '请转录这张处方，并按指定 JSON 整理。'}]}]}
@@ -75,7 +80,7 @@ def recognize(data):
             content = '\n'.join(content.splitlines()[1:-1])
         return 200, validate_result(json.loads(content))
     except HTTPError as e:
-        message = {400: '模型请求参数或照片格式不受支持，请重新选择 JPEG/PNG 照片。', 401: 'API Key 无效，请检查后端配置。', 402: '硅基流动账户余额不足，请充值或检查可用额度后重试，无需更换 API Key。', 404: '模型不存在或已下线，请检查模型名称。', 403: '模型访问被拒绝，请检查权限。', 429: '服务繁忙或额度不足，请稍后重试。'}.get(e.code, f'模型服务暂时失败（HTTP {e.code}），请稍后重试。')
+        message = {400: '模型请求参数或照片格式不受支持，请重新选择 JPEG/PNG 照片。', 401: 'API Key 无效，请检查后端配置。', 402: '硅基流动账户余额不足，请充值或检查可用额度后重试，无需更换 API Key。', 404: '模型不存在或已下线，请检查模型名称。', 403: '模型访问被拒绝，请检查权限。', 429: '服务繁忙或额度不足，请稍后重试。'}.get(e.code, f'当前模型服务请求失败（HTTP {e.code}），可点击“识别模型”切换后重试。')
         return 502, {'error': message}
     except (URLError, TimeoutError):
         return 504, {'error': '识别服务连接超时，请稍后重试。'}

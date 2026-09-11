@@ -1,3 +1,4 @@
+import 'package:smart_drugbox/period_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,6 +58,39 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('period popup opens below its trigger and selects morning', (
+    tester,
+  ) async {
+    int selected = 1080;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.only(top: 120, left: 20),
+            child: StatefulBuilder(
+              builder: (context, setState) => PeriodPicker(
+                times: const [480, 720, 1080],
+                selected: selected,
+                onSelected: (time) => setState(() => selected = time),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final trigger = tester.getRect(find.text('晚上 · 18:00'));
+    await tester.tap(find.text('晚上 · 18:00'));
+    await tester.pumpAndSettle();
+    expect(find.text('早上'), findsOneWidget);
+    expect(find.text('中午'), findsOneWidget);
+    expect(find.text('晚上'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('早上')).dy, greaterThan(trigger.bottom));
+    await tester.tap(find.text('早上'));
+    await tester.pumpAndSettle();
+    expect(selected, 480);
+    expect(find.text('早上 · 08:00'), findsOneWidget);
+    expect(find.text('中午'), findsNothing);
   });
   test('only plain daily frequencies receive suggestions', () {
     expect(suggestedTimes('一日三次'), [480, 720, 1080]);
