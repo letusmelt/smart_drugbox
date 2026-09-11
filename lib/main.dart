@@ -1,3 +1,4 @@
+import 'press_button.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'medicine.dart';
 import 'care.dart';
@@ -16,6 +17,31 @@ const ink = Color(0xFF1C304B);
 const muted = Color(0xFF8B929A);
 const canvas = Color(0xFFF2EFEB);
 
+TextTheme spacedTextTheme() {
+  final base = ThemeData().textTheme.apply(
+    fontFamily: 'AppNotoSansSC',
+    bodyColor: ink,
+    displayColor: ink,
+  );
+  return base.copyWith(
+    displayLarge: base.displayLarge?.copyWith(letterSpacing: 0.35),
+    displayMedium: base.displayMedium?.copyWith(letterSpacing: 0.35),
+    displaySmall: base.displaySmall?.copyWith(letterSpacing: 0.35),
+    headlineLarge: base.headlineLarge?.copyWith(letterSpacing: 0.35),
+    headlineMedium: base.headlineMedium?.copyWith(letterSpacing: 0.35),
+    headlineSmall: base.headlineSmall?.copyWith(letterSpacing: 0.35),
+    titleLarge: base.titleLarge?.copyWith(letterSpacing: 0.35),
+    titleMedium: base.titleMedium?.copyWith(letterSpacing: 0.35),
+    titleSmall: base.titleSmall?.copyWith(letterSpacing: 0.35),
+    bodyLarge: base.bodyLarge?.copyWith(letterSpacing: 0.35),
+    bodyMedium: base.bodyMedium?.copyWith(letterSpacing: 0.35, fontSize: 15),
+    bodySmall: base.bodySmall?.copyWith(letterSpacing: 0.35),
+    labelLarge: base.labelLarge?.copyWith(letterSpacing: 0.35),
+    labelMedium: base.labelMedium?.copyWith(letterSpacing: 0.35),
+    labelSmall: base.labelSmall?.copyWith(letterSpacing: 0.35),
+  );
+}
+
 class MedicineApp extends StatelessWidget {
   const MedicineApp({super.key});
   @override
@@ -33,7 +59,11 @@ class MedicineApp extends StatelessWidget {
       cupertinoOverrideTheme: const CupertinoThemeData(
         primaryColor: navy,
         textTheme: CupertinoTextThemeData(
-          textStyle: TextStyle(fontFamily: 'AppNotoSansSC', color: ink),
+          textStyle: TextStyle(
+            fontFamily: 'AppNotoSansSC',
+            color: ink,
+            letterSpacing: 0.35,
+          ),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -42,9 +72,7 @@ class MedicineApp extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
       ),
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(color: ink, fontSize: 15),
-      ),
+      textTheme: spacedTextTheme(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: canvas,
@@ -210,7 +238,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    CupertinoButton(
+                    PressButton(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 22,
                         vertical: 14,
@@ -291,7 +319,9 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                           ],
                         ),
                       )
-                    : CupertinoButton(
+                    : PressButton(
+                        color: const Color(0xFFEAE7E3),
+                        borderRadius: BorderRadius.circular(28),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 23,
@@ -362,7 +392,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
   );
 
   Widget actionPill(IconData icon, String label, VoidCallback onPressed) =>
-      CupertinoButton(
+      PressButton(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 17),
         color: const Color(0xFFEAE7E3),
         borderRadius: BorderRadius.circular(28),

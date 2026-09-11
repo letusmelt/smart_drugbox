@@ -139,21 +139,32 @@ class _AppTabsState extends State<AppTabs> with WidgetsBindingObserver {
               ],
             ),
       bottomNavigationBar: CupertinoTabBar(
+        height: 62,
+        iconSize: 22,
         currentIndex: tab,
         activeColor: _navy,
         backgroundColor: const Color(0xFFF2EFEB),
         onTap: (value) => setState(() => tab = value),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.doc_text),
+            icon: Padding(
+              padding: EdgeInsets.only(top: 7, bottom: 3),
+              child: Icon(CupertinoIcons.doc_text),
+            ),
             label: '处方',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.square_grid_2x2),
+            icon: Padding(
+              padding: EdgeInsets.only(top: 7, bottom: 3),
+              child: Icon(CupertinoIcons.square_grid_2x2),
+            ),
             label: '今日用药',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.calendar),
+            icon: Padding(
+              padding: EdgeInsets.only(top: 7, bottom: 3),
+              child: Icon(CupertinoIcons.calendar),
+            ),
             label: '用药记录',
           ),
         ],
