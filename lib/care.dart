@@ -579,6 +579,7 @@ class _TodayPageState extends State<TodayPage> {
         widget.store.start!.compareTo(today) <= 0 &&
         (widget.store.end == null || widget.store.end!.compareTo(today) >= 0);
     final times = <int>{
+      if (planApplies) ...[480, 720, 1080],
       ...events.map((e) => e['minute'] as int),
       if (planApplies)
         ...widget.store.plan.expand(
@@ -664,11 +665,56 @@ class _TodayPageState extends State<TodayPage> {
         else
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              current.isEmpty
-                  ? '此时段仅供查看，今天未生成服用任务'
-                  : '本次 $count / ${current.length} 项已确认',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '吃药进度 $count/${current.length}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF326BD1),
+                  ),
+                ),
+                if (current.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (var row = 0; row < 2; row++)
+                    if (row * ((current.length + 1) ~/ 2) < current.length)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            for (final event
+                                in current
+                                    .skip(row * ((current.length + 1) ~/ 2))
+                                    .take((current.length + 1) ~/ 2))
+                              Semantics(
+                                label:
+                                    '${event['name']}：${event['taken'] == null ? '未服用' : '已服用'}',
+                                child: Container(
+                                  width: 13,
+                                  height: 13,
+                                  margin: const EdgeInsets.only(right: 10),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: event['taken'] == null
+                                        ? _navy
+                                        : const Color(0xFFC4CDD4),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                ] else
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      '此时段没有待服用任务',
+                      style: TextStyle(fontSize: 13, color: _muted),
+                    ),
+                  ),
+              ],
             ),
           ),
         LayoutBuilder(
@@ -687,6 +733,7 @@ class _TodayPageState extends State<TodayPage> {
                   planApplies &&
                   planned.isNotEmpty &&
                   (planned.first['times'] as List).contains(selected);
+              if (e == null && !preview) return const SizedBox.shrink();
               final taken = e?['taken'] != null;
               final text = e == null
                   ? preview
@@ -786,11 +833,11 @@ class _DoseTileState extends State<DoseTile>
   @override
   Widget build(BuildContext context) {
     final foreground = widget.taken
-        ? const Color(0xFF68717D)
+        ? const Color(0xFF9DA8B1)
         : _dots[widget.slot].computeLuminance() < 0.3
         ? Colors.white
         : Colors.black87;
-    final color = widget.taken ? const Color(0xFFDFDDDA) : _dots[widget.slot];
+    final color = widget.taken ? const Color(0xFFE6EEF2) : _dots[widget.slot];
     return Semantics(
       button: true,
       label:
@@ -844,51 +891,36 @@ class _DoseTileState extends State<DoseTile>
                       color: foreground,
                     ),
                   ),
-                  const SizedBox(height: 7),
-                  Text(
-                    widget.taken
-                        ? '✓ 已确认服用'
-                        : widget.scheduled
-                        ? widget.dose!
-                        : widget.inactiveLabel ?? '本次不用服用',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: foreground,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              );
-              final pill = Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 14 : 18,
-                  vertical: 13,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                child: Wrap(
-                  spacing: 7,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Icon(
-                      widget.taken
-                          ? CupertinoIcons.checkmark
-                          : CupertinoIcons.speaker_2_fill,
-                      color: Colors.black87,
-                      size: 19,
-                    ),
+                  if (!widget.taken) ...[
+                    const SizedBox(height: 7),
                     Text(
-                      widget.taken ? '已服用' : '听说明',
+                      widget.scheduled
+                          ? widget.dose!
+                          : widget.inactiveLabel ?? '本次不用服用',
                       style: TextStyle(
-                        color: widget.taken ? _muted : Colors.black87,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: foreground,
+                        height: 1.6,
                       ),
                     ),
                   ],
+                ],
+              );
+              final pill = Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: widget.taken ? Colors.white54 : Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.taken
+                      ? CupertinoIcons.checkmark
+                      : CupertinoIcons.speaker_2_fill,
+                  color: widget.taken
+                      ? const Color(0xFF9DA8B1)
+                      : Colors.black87,
+                  size: 30,
                 ),
               );
               return Column(

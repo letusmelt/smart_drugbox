@@ -35,8 +35,21 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final store = CareStore();
     await store.load();
+    store.start = dayKey(DateTime.now());
+    store.plan = List.generate(
+      8,
+      (i) => {
+        'slot': i,
+        'name': '测试药$i',
+        'dose': '1片',
+        'method': '口服',
+        'times': [480, 720, 1080],
+      },
+    );
     await tester.pumpWidget(
-      MaterialApp(home: TodayPage(store: store, active: true)),
+      MaterialApp(
+        home: Scaffold(body: TodayPage(store: store, active: true)),
+      ),
     );
     await tester.pumpAndSettle();
     final tiles = find.byType(DoseTile);
