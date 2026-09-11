@@ -1,3 +1,4 @@
+import 'vitals_sheet.dart';
 import 'period_picker.dart';
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
@@ -498,7 +499,6 @@ class _TodayPageState extends State<TodayPage> {
   final tts = FlutterTts();
   int? selected;
   String? currentDay;
-  String? spoken;
   bool voiceReady = false;
   @override
   void initState() {
@@ -532,7 +532,6 @@ class _TodayPageState extends State<TodayPage> {
   }
 
   void speak(String text) {
-    setState(() => spoken = text);
     if (!voiceReady) {
       prepareVoice();
       _message(context, '语音正在准备，请再点一次');
@@ -551,16 +550,18 @@ class _TodayPageState extends State<TodayPage> {
   }
 
   Future<void> mark(Map<String, dynamic> e) async {
-    final ok = await widget.store.mark(e['id'], true);
+    tts.stop();
+    final taken = e['taken'] == null;
+    final ok = await widget.store.mark(e['id'], taken);
     if (!mounted || !ok) return;
     HapticFeedback.mediumImpact();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${e['name']} · 已确认服用'),
+        content: Text('${e['name']} · ${taken ? '已确认服用' : '已撤销服用'}'),
         action: SnackBarAction(
           label: '撤销',
-          onPressed: () => widget.store.mark(e['id'], false),
+          onPressed: () => widget.store.mark(e['id'], !taken),
         ),
       ),
     );
@@ -628,20 +629,32 @@ class _TodayPageState extends State<TodayPage> {
             ),
           ],
         ),
-        _note(
-          '${DateTime.now().month} 月 ${DateTime.now().day} 日 · 短按听说明，按住 1 秒确认服用',
-        ),
+        _note('短按听说明/记录体征 · 长按确认/撤销'),
         if (times.isNotEmpty)
-          PeriodPicker(
-            times: times,
-            selected: selected!,
-            onSelected: (time) {
-              tts.stop();
-              setState(() {
-                selected = time;
-                spoken = null;
-              });
-            },
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              PeriodPicker(
+                times: times,
+                selected: selected!,
+                onSelected: (time) {
+                  tts.stop();
+                  setState(() {
+                    selected = time;
+                  });
+                },
+              ),
+              Text(
+                '${DateTime.now().month}月${DateTime.now().day}日',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: _navy,
+                ),
+              ),
+            ],
           ),
         const SizedBox(height: 16),
         if (times.isEmpty)
@@ -750,38 +763,27 @@ class _TodayPageState extends State<TodayPage> {
                   inactiveLabel: preview ? '安排启用前 · 仅供查看' : null,
                   taken: taken,
                   scheduled: e != null,
-                  onTap: () => speak(text),
-                  onHold: e == null || taken ? null : () => mark(e),
+                  takenTime: taken
+                      ? clockText(
+                          DateTime.parse(e!['taken']).hour * 60 +
+                              DateTime.parse(e['taken']).minute,
+                        )
+                      : null,
+                  onTap: () {
+                    if (taken) {
+                      tts.stop();
+                      showVitalsSheet(context, widget.store, e!);
+                    } else {
+                      speak(text);
+                    }
+                  },
+                  onHold: e == null ? null : () => mark(e),
                 ),
               );
             }),
           ),
         ),
-        if (spoken != null)
-          Container(
-            margin: const EdgeInsets.only(top: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _group,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(CupertinoIcons.speaker_2, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(spoken!, style: const TextStyle(height: 1.7)),
-                ),
-                IconButton(
-                  tooltip: '停止播报',
-                  onPressed: () => tts.stop(),
-                  icon: const Icon(CupertinoIcons.stop_circle),
-                ),
-              ],
-            ),
-          ),
-        _note('已确认表示手动确认，不代表药箱检测结果。误操作可在“用药记录”撤销。当前未开启后台响铃。'),
+        _note('已确认表示手动确认，不代表药箱检测结果。'),
       ]),
     );
   }
@@ -792,6 +794,7 @@ class DoseTile extends StatefulWidget {
   final String name;
   final String? dose;
   final String? inactiveLabel;
+  final String? takenTime;
   final bool taken, scheduled;
   final VoidCallback onTap;
   final VoidCallback? onHold;
@@ -801,6 +804,7 @@ class DoseTile extends StatefulWidget {
     required this.name,
     this.dose,
     this.inactiveLabel,
+    this.takenTime,
     required this.taken,
     required this.scheduled,
     required this.onTap,
@@ -891,6 +895,13 @@ class _DoseTileState extends State<DoseTile>
                       color: foreground,
                     ),
                   ),
+                  if (widget.taken && widget.takenTime != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.takenTime!,
+                      style: TextStyle(fontSize: 13, color: foreground),
+                    ),
+                  ],
                   if (!widget.taken) ...[
                     const SizedBox(height: 7),
                     Text(

@@ -239,6 +239,23 @@ class CareStore extends ChangeNotifier {
     }
   }
 
+  Future<bool> saveVitals(String id, Map<String, String> values) async {
+    final event = events.firstWhere((e) => e['id'] == id);
+    final old = event['vitals'];
+    event['vitals'] = {
+      ...values,
+      'recordedAt': DateTime.now().toIso8601String(),
+    };
+    if (await persist()) return true;
+    if (old == null) {
+      event.remove('vitals');
+    } else {
+      event['vitals'] = old;
+    }
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> mark(String id, bool taken) async {
     final e = events.firstWhere((e) => e['id'] == id);
     if (taken && e['taken'] != null) return true;

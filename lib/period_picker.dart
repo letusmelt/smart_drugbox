@@ -29,6 +29,7 @@ class PeriodPicker extends StatelessWidget {
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerLeft,
     heightFactor: 1,
+    widthFactor: 1,
     child: PopupMenuButton<int>(
       tooltip: '切换早中晚',
       position: PopupMenuPosition.under,
