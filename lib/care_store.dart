@@ -7,7 +7,7 @@ String dayKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 String clockText(int minutes) =>
     '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-const boxNames = ['蓝色', '橙色', '绿色', '紫色', '粉色', '黄色', '青色', '棕色'];
+const boxNames = ['浅绿色', '翠绿色', '深青色', '天蓝色', '蓝紫色', '深紫色', '青绿色', '浅蓝紫色'];
 Map<String, dynamic> medicineJson(Medicine m) => {
   'name': m.name,
   'dose': m.dose,

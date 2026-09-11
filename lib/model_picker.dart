@@ -34,7 +34,7 @@ class _ModelPickerState extends State<ModelPicker> {
     if (!mounted) return;
     final selected = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: const Color(0xFFF2EFEB),
+      backgroundColor: const Color(0xFFF0F9FD),
       showDragHandle: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -65,7 +65,7 @@ class _ModelPickerState extends State<ModelPicker> {
                     ),
                     tileColor: recognitionModel.value == model
                         ? const Color(0xFFDCE3F2)
-                        : const Color(0xFFEAE7E3),
+                        : const Color(0xFFE1F1F8),
                     title: Text(
                       model.split('/').last,
                       style: const TextStyle(fontSize: 15),
@@ -98,7 +98,7 @@ class _ModelPickerState extends State<ModelPicker> {
     builder: (context, model, _) => TextButton(
       onPressed: widget.enabled ? choose : null,
       style: TextButton.styleFrom(
-        backgroundColor: const Color(0xFFEAE7E3),
+        backgroundColor: const Color(0xFFE1F1F8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),

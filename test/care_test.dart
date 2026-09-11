@@ -18,7 +18,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('今日用药').last);
     await tester.pumpAndSettle();
-    expect(find.text('还没有用药安排\n先在“处方”中设置每日提醒'), findsOneWidget);
+    expect(find.text('请在“处方”中设置每日提醒'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('用药记录').last);
     await tester.pumpAndSettle();

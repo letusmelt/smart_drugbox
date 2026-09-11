@@ -16,7 +16,7 @@ void main() => runApp(const MedicineApp());
 const navy = Color(0xFF142F56);
 const ink = Color(0xFF1C304B);
 const muted = Color(0xFF8B929A);
-const canvas = Color(0xFFF2EFEB);
+const canvas = Color(0xFFF0F9FD);
 
 TextTheme spacedTextTheme() {
   final base = ThemeData().textTheme.apply(
@@ -25,21 +25,21 @@ TextTheme spacedTextTheme() {
     displayColor: ink,
   );
   return base.copyWith(
-    displayLarge: base.displayLarge?.copyWith(letterSpacing: 0.35),
-    displayMedium: base.displayMedium?.copyWith(letterSpacing: 0.35),
-    displaySmall: base.displaySmall?.copyWith(letterSpacing: 0.35),
-    headlineLarge: base.headlineLarge?.copyWith(letterSpacing: 0.35),
-    headlineMedium: base.headlineMedium?.copyWith(letterSpacing: 0.35),
-    headlineSmall: base.headlineSmall?.copyWith(letterSpacing: 0.35),
-    titleLarge: base.titleLarge?.copyWith(letterSpacing: 0.35),
-    titleMedium: base.titleMedium?.copyWith(letterSpacing: 0.35),
-    titleSmall: base.titleSmall?.copyWith(letterSpacing: 0.35),
-    bodyLarge: base.bodyLarge?.copyWith(letterSpacing: 0.35),
-    bodyMedium: base.bodyMedium?.copyWith(letterSpacing: 0.35, fontSize: 15),
-    bodySmall: base.bodySmall?.copyWith(letterSpacing: 0.35),
-    labelLarge: base.labelLarge?.copyWith(letterSpacing: 0.35),
-    labelMedium: base.labelMedium?.copyWith(letterSpacing: 0.35),
-    labelSmall: base.labelSmall?.copyWith(letterSpacing: 0.35),
+    displayLarge: base.displayLarge?.copyWith(letterSpacing: 0.55),
+    displayMedium: base.displayMedium?.copyWith(letterSpacing: 0.55),
+    displaySmall: base.displaySmall?.copyWith(letterSpacing: 0.55),
+    headlineLarge: base.headlineLarge?.copyWith(letterSpacing: 0.55),
+    headlineMedium: base.headlineMedium?.copyWith(letterSpacing: 0.55),
+    headlineSmall: base.headlineSmall?.copyWith(letterSpacing: 0.55),
+    titleLarge: base.titleLarge?.copyWith(letterSpacing: 0.55),
+    titleMedium: base.titleMedium?.copyWith(letterSpacing: 0.55),
+    titleSmall: base.titleSmall?.copyWith(letterSpacing: 0.55),
+    bodyLarge: base.bodyLarge?.copyWith(letterSpacing: 0.55),
+    bodyMedium: base.bodyMedium?.copyWith(letterSpacing: 0.55, fontSize: 15),
+    bodySmall: base.bodySmall?.copyWith(letterSpacing: 0.55),
+    labelLarge: base.labelLarge?.copyWith(letterSpacing: 0.55),
+    labelMedium: base.labelMedium?.copyWith(letterSpacing: 0.55),
+    labelSmall: base.labelSmall?.copyWith(letterSpacing: 0.55),
   );
 }
 
@@ -63,7 +63,7 @@ class MedicineApp extends StatelessWidget {
           textStyle: TextStyle(
             fontFamily: 'AppNotoSansSC',
             color: ink,
-            letterSpacing: 0.35,
+            letterSpacing: 0.55,
           ),
         ),
       ),
@@ -74,6 +74,10 @@ class MedicineApp extends StatelessWidget {
         elevation: 0,
       ),
       textTheme: spacedTextTheme(),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: canvas,
+        surfaceTintColor: Colors.transparent,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: canvas,
@@ -295,7 +299,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAE7E3),
+                  color: const Color(0xFFE1F1F8),
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: saved == null
@@ -323,7 +327,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                         ),
                       )
                     : PressButton(
-                        color: const Color(0xFFEAE7E3),
+                        color: const Color(0xFFE1F1F8),
                         borderRadius: BorderRadius.circular(28),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -397,7 +401,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
   Widget actionPill(IconData icon, String label, VoidCallback onPressed) =>
       PressButton(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 17),
-        color: const Color(0xFFEAE7E3),
+        color: const Color(0xFFE1F1F8),
         borderRadius: BorderRadius.circular(28),
         onPressed: onPressed,
         child: Row(
@@ -500,7 +504,7 @@ class _CapturePageState extends State<CapturePage> {
         ? configured
         : kIsWeb
         ? '${Uri.base.scheme}://${Uri.base.host}:8787'
-        : 'http://127.0.0.1:8787';
+        : 'http://yuedeMac-mini.local:8787';
     try {
       final response = await http
           .post(
@@ -577,7 +581,7 @@ class _CapturePageState extends State<CapturePage> {
                 height: 365,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAE7E3),
+                  color: const Color(0xFFE1F1F8),
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: photo == null
@@ -735,7 +739,7 @@ class _ReviewPageState extends State<ReviewPage> {
     final accepted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: canvas,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -760,11 +764,30 @@ class _ReviewPageState extends State<ReviewPage> {
                 for (var i = 0; i < 5; i++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
-                    child: TextField(
-                      controller: controllers[i],
-                      decoration: InputDecoration(
-                        labelText: ['药品名称', '每次用量', '服用频次', '服用方式', '药品规格'][i],
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ['药品名称', '每次用量', '服用频次', '服用方式', '药品规格'][i],
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: controllers[i],
+                          minLines: 1,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            fillColor: Color(0xFFE1F1F8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 primaryButton('保存修改', () {
@@ -828,17 +851,24 @@ class _ReviewPageState extends State<ReviewPage> {
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEEFEA),
+                  color: const Color(0xFFE1F1F8),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(CupertinoIcons.info_circle, size: 18, color: navy),
+                    Padding(
+                      padding: EdgeInsets.only(top: 3),
+                      child: Icon(
+                        CupertinoIcons.info_circle,
+                        size: 18,
+                        color: navy,
+                      ),
+                    ),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '识别结果可能有误，请逐项核对。\n“待确认”表示未识别清楚，不要据此安排用药。',
+                        '识别结果可能有误，请逐项核对。“待确认”表示未识别清楚，不要据此安排用药。',
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.7,
@@ -932,7 +962,23 @@ class _ReviewPageState extends State<ReviewPage> {
                       detail('每次用量', medicines[i].dose),
                       detail('服用频次', medicines[i].frequency),
                       detail('服用方式', medicines[i].method),
-                      detail('对应原文', medicines[i].sourceText),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '对应原文',
+                              style: TextStyle(color: muted, fontSize: 13),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              medicines[i].sourceText,
+                              style: const TextStyle(fontSize: 13, height: 1.7),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -984,12 +1030,18 @@ class _ReviewPageState extends State<ReviewPage> {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: muted, fontSize: 13)),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: const TextStyle(color: muted, fontSize: 13),
+          ),
+        ),
         const SizedBox(width: 24),
         Expanded(
           child: Text(
             value,
-            textAlign: TextAlign.right,
+            textAlign: TextAlign.left,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ),

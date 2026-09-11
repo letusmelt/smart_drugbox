@@ -11,26 +11,17 @@ export 'care_store.dart';
 
 const _navy = Color(0xFF142F56);
 const _muted = Color(0xFF738093);
-const _group = Color(0xFFEAE7E3);
-const _colors = [
-  Color(0xFFD5E4F6),
-  Color(0xFFF5DFC6),
-  Color(0xFFDDE9D3),
-  Color(0xFFE5DCF2),
-  Color(0xFFF3DAE3),
-  Color(0xFFF4EBC3),
-  Color(0xFFCEE8E7),
-  Color(0xFFE7DCD2),
-];
+const _group = Color(0xFFE1F1F8);
+
 const _dots = [
-  Color(0xFF42689A),
-  Color(0xFF995B25),
-  Color(0xFF527338),
-  Color(0xFF745493),
-  Color(0xFFA34C71),
-  Color(0xFF877018),
-  Color(0xFF2C716D),
-  Color(0xFF7C5C47),
+  Color(0xFFB9FB83),
+  Color(0xFF00C580),
+  Color(0xFF0B4948),
+  Color(0xFF83D5F1),
+  Color(0xFF494DDF),
+  Color(0xFF262360),
+  Color(0xFF53B9B1),
+  Color(0xFFA7B6F6),
 ];
 Widget _button(String text, VoidCallback? action) => SizedBox(
   width: double.infinity,
@@ -144,7 +135,7 @@ class _AppTabsState extends State<AppTabs> with WidgetsBindingObserver {
         iconSize: 22,
         currentIndex: tab,
         activeColor: _navy,
-        backgroundColor: const Color(0xFFF2EFEB),
+        backgroundColor: const Color(0xFFF0F9FD),
         onTap: (value) => setState(() => tab = value),
         items: const [
           BottomNavigationBarItem(
@@ -370,24 +361,53 @@ class _SchedulePageState extends State<SchedulePage> {
                 '${row.medicine.dose} · ${row.medicine.frequency}\n${row.medicine.method}',
               ),
               if (row.enabled) ...[
+                const Text(
+                  "对应药格",
+                  style: TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+                const SizedBox(height: 10),
                 DropdownButtonFormField<int>(
                   initialValue: row.slot < 8 ? row.slot : null,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: '对应药格'),
+                  decoration: InputDecoration(
+                    fillColor: row.slot < 8 ? _dots[row.slot] : null,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 18,
+                    ),
+                  ),
+                  style: TextStyle(
+                    color:
+                        row.slot < 8 && _dots[row.slot].computeLuminance() < 0.3
+                        ? Colors.white
+                        : Colors.black87,
+                    fontSize: 17,
+                  ),
+                  dropdownColor: const Color(0xFFF0F9FD),
+                  selectedItemBuilder: (context) =>
+                      List.generate(8, (i) => Text('${i + 1} 号药格')),
                   items: List.generate(
                     8,
                     (i) => DropdownMenuItem(
                       value: i,
-                      child: Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.circle_fill,
-                            color: _dots[i],
-                            size: 16,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _dots[i],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${i + 1} 号药格',
+                          style: TextStyle(
+                            color: _dots[i].computeLuminance() < 0.3
+                                ? Colors.white
+                                : Colors.black87,
                           ),
-                          const SizedBox(width: 10),
-                          Text('${i + 1} 号 · ${boxNames[i]}'),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -582,9 +602,9 @@ class _TodayPageState extends State<TodayPage> {
               child: Text(
                 '今日用药',
                 style: TextStyle(
-                  fontSize: 30,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
-                  color: _navy,
+                  color: Colors.black87,
                 ),
               ),
             ),
@@ -632,9 +652,13 @@ class _TodayPageState extends State<TodayPage> {
             ),
             child: Text(
               widget.store.plan.isEmpty
-                  ? '还没有用药安排\n先在“处方”中设置每日提醒'
+                  ? '请在“处方”中设置每日提醒'
                   : '今天没有待执行的安排\n新设置的提醒从下一个服用时间开始',
-              style: const TextStyle(fontSize: 17, height: 1.8),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.6,
+                color: Colors.black87,
+              ),
             ),
           )
         else
@@ -761,7 +785,11 @@ class _DoseTileState extends State<DoseTile>
 
   @override
   Widget build(BuildContext context) {
-    final foreground = widget.taken ? const Color(0xFF68717D) : Colors.white;
+    final foreground = widget.taken
+        ? const Color(0xFF68717D)
+        : _dots[widget.slot].computeLuminance() < 0.3
+        ? Colors.white
+        : Colors.black87;
     final color = widget.taken ? const Color(0xFFDFDDDA) : _dots[widget.slot];
     return Semantics(
       button: true,
@@ -799,7 +827,7 @@ class _DoseTileState extends State<DoseTile>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${widget.slot + 1} 号药格 · ${boxNames[widget.slot]}',
+                    '${widget.slot + 1} 号药格',
                     style: TextStyle(
                       fontSize: 13,
                       color: foreground,
@@ -849,13 +877,13 @@ class _DoseTileState extends State<DoseTile>
                       widget.taken
                           ? CupertinoIcons.checkmark
                           : CupertinoIcons.speaker_2_fill,
-                      color: color,
+                      color: Colors.black87,
                       size: 19,
                     ),
                     Text(
                       widget.taken ? '已服用' : '听说明',
                       style: TextStyle(
-                        color: widget.taken ? _muted : color,
+                        color: widget.taken ? _muted : Colors.black87,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1057,8 +1085,10 @@ class _RecordPageState extends State<RecordPage> {
                       vertical: 10,
                     ),
                     leading: CircleAvatar(
-                      backgroundColor: _colors[e['slot']],
-                      foregroundColor: _navy,
+                      backgroundColor: _dots[e['slot']],
+                      foregroundColor: _dots[e['slot']].computeLuminance() < 0.3
+                          ? Colors.white
+                          : Colors.black87,
                       child: Text('${e['slot'] + 1}'),
                     ),
                     title: Text(

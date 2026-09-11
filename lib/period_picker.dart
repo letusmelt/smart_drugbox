@@ -33,7 +33,7 @@ class PeriodPicker extends StatelessWidget {
       tooltip: '切换早中晚',
       position: PopupMenuPosition.under,
       offset: const Offset(0, 10),
-      color: const Color(0xFFF6F3EF),
+      color: const Color(0xFFF0F9FD),
       surfaceTintColor: Colors.transparent,
       elevation: 8,
       shadowColor: Colors.black26,
@@ -53,7 +53,7 @@ class PeriodPicker extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: active ? const Color(0xFF142F56) : const Color(0xFFEAE7E3),
+              color: active ? const Color(0xFF142F56) : const Color(0xFFE1F1F8),
               borderRadius: BorderRadius.circular(40),
             ),
             child: Row(
