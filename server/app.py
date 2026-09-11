@@ -75,7 +75,7 @@ def recognize(data):
             content = '\n'.join(content.splitlines()[1:-1])
         return 200, validate_result(json.loads(content))
     except HTTPError as e:
-        message = {401: 'API Key 无效，请检查后端配置。', 403: '模型访问被拒绝，请检查权限。', 429: '服务繁忙或额度不足，请稍后重试。'}.get(e.code, '模型服务请求失败，请稍后重试。')
+        message = {400: '模型请求参数或照片格式不受支持，请重新选择 JPEG/PNG 照片。', 401: 'API Key 无效，请检查后端配置。', 402: '硅基流动账户余额不足，请充值或检查可用额度后重试，无需更换 API Key。', 404: '模型不存在或已下线，请检查模型名称。', 403: '模型访问被拒绝，请检查权限。', 429: '服务繁忙或额度不足，请稍后重试。'}.get(e.code, f'模型服务暂时失败（HTTP {e.code}），请稍后重试。')
         return 502, {'error': message}
     except (URLError, TimeoutError):
         return 504, {'error': '识别服务连接超时，请稍后重试。'}

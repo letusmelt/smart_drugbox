@@ -1,3 +1,6 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'medicine.dart';
+import 'care.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -11,7 +14,7 @@ void main() => runApp(const MedicineApp());
 const navy = Color(0xFF142F56);
 const ink = Color(0xFF1C304B);
 const muted = Color(0xFF8B929A);
-const canvas = Color(0xFFFAF9F6);
+const canvas = Color(0xFFF2EFEB);
 
 class MedicineApp extends StatelessWidget {
   const MedicineApp({super.key});
@@ -19,6 +22,9 @@ class MedicineApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: '安心药箱',
+    locale: const Locale('zh', 'CN'),
+    supportedLocales: const [Locale('zh', 'CN')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: canvas,
@@ -48,23 +54,61 @@ class MedicineApp extends StatelessWidget {
         ),
       ),
     ),
-    home: const PrescriptionHome(),
+    home: const AppTabs(),
   );
 }
 
 class PrescriptionHome extends StatefulWidget {
-  const PrescriptionHome({super.key});
+  final CareStore store;
+  const PrescriptionHome({super.key, required this.store});
   @override
   State<PrescriptionHome> createState() => _PrescriptionHomeState();
 }
 
 class _PrescriptionHomeState extends State<PrescriptionHome> {
   List<Medicine>? saved;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.store.prescription.isNotEmpty) saved = widget.store.prescription;
+  }
+
+  Future<void> accept(List<Medicine> result) async {
+    setState(() => saved = result);
+    final stored = await widget.store.savePrescription(result);
+    if (!stored) return;
+    if (!mounted) return;
+    final add = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text("处方已保存"),
+        content: const Text("要为这些药品设置每日提醒吗？"),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("稍后设置"),
+          ),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("设置提醒"),
+          ),
+        ],
+      ),
+    );
+    if (add == true && mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SchedulePage(store: widget.store, medicines: result),
+        ),
+      );
+    }
+  }
+
   Future<void> start({ImageSource source = ImageSource.camera}) async {
     final result = await Navigator.of(context).push<List<Medicine>>(
       CupertinoPageRoute(builder: (_) => CapturePage(source: source)),
     );
-    if (result != null && mounted) setState(() => saved = result);
+    if (result != null && mounted) await accept(result);
   }
 
   Future<void> openPrescriptions() async {
@@ -107,7 +151,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
     final result = await Navigator.of(context).push<List<Medicine>>(
       CupertinoPageRoute(builder: (_) => ReviewPage(initial: saved)),
     );
-    if (result != null && mounted) setState(() => saved = result);
+    if (result != null && mounted) await accept(result);
   }
 
   @override
@@ -220,7 +264,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEBEDF0),
+                  color: const Color(0xFFEAE7E3),
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: saved == null
@@ -287,11 +331,26 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                         ),
                       ),
               ),
+              if (saved != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: primaryButton(
+                    '设置每日提醒',
+                    () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SchedulePage(
+                          store: widget.store,
+                          medicines: saved!,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  '处方仅在本次运行保存',
+                  '用药信息保存在本机，原照片仅本次运行可看',
                   style: TextStyle(color: muted, fontSize: 11, height: 1.6),
                 ),
               ),
@@ -305,7 +364,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
   Widget actionPill(IconData icon, String label, VoidCallback onPressed) =>
       CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 17),
-        color: const Color(0xFFEBEDF0),
+        color: const Color(0xFFEAE7E3),
         borderRadius: BorderRadius.circular(28),
         onPressed: onPressed,
         child: Row(
@@ -480,7 +539,7 @@ class _CapturePageState extends State<CapturePage> {
                 height: 365,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEBEDF0),
+                  color: const Color(0xFFEAE7E3),
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: photo == null
@@ -607,31 +666,6 @@ class PrescriptionPaper extends StatelessWidget {
         Text('示例内容，不作为用药依据', style: TextStyle(fontSize: 10, color: muted)),
       ],
     ),
-  );
-}
-
-class Medicine {
-  String name, dose, frequency, method, specification, sourceText, warnings;
-  Uint8List? photo;
-  Medicine(
-    this.name,
-    this.dose,
-    this.frequency,
-    this.method, {
-    this.specification = '待确认',
-    this.sourceText = '',
-    this.warnings = '',
-    this.photo,
-  });
-  Medicine copy() => Medicine(
-    name,
-    dose,
-    frequency,
-    method,
-    specification: specification,
-    sourceText: sourceText,
-    warnings: warnings,
-    photo: photo,
   );
 }
 
@@ -897,7 +931,7 @@ class _ReviewPageState extends State<ReviewPage> {
               const SizedBox(height: 12),
               const Center(
                 child: Text(
-                  '演示版仅在本次会话保存',
+                  '确认后保存用药信息到本机',
                   style: TextStyle(color: muted, fontSize: 11),
                 ),
               ),

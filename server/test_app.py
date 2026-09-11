@@ -49,3 +49,10 @@ class RecognitionTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class BillingTests(unittest.TestCase):
+    def test_insufficient_balance_has_actionable_message(self):
+        with patch.dict(os.environ, {'SILICONFLOW_API_KEY': 'test'}), patch('app.urlopen', side_effect=HTTPError('url', 402, 'billing', None, None)):
+            status, result = app.recognize({'image': base64.b64encode(b'\xff\xd8\xfftest').decode()})
+            self.assertEqual(status, 502)
+            self.assertIn('余额不足', result['error'])
