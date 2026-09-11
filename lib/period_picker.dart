@@ -98,7 +98,7 @@ class PeriodPicker extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${periodName(selected)} · ${clockText(selected)}',
+              periodName(selected),
               style: const TextStyle(
                 color: Color(0xFF142F56),
                 fontSize: 19,

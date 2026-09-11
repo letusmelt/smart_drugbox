@@ -92,17 +92,17 @@ void main() {
         ),
       ),
     );
-    final trigger = tester.getRect(find.text('晚上 · 18:00'));
-    await tester.tap(find.text('晚上 · 18:00'));
+    final trigger = tester.getRect(find.text('晚上'));
+    await tester.tap(find.text('晚上'));
     await tester.pumpAndSettle();
     expect(find.text('早上'), findsOneWidget);
     expect(find.text('中午'), findsOneWidget);
-    expect(find.text('晚上'), findsOneWidget);
+    expect(find.text('晚上'), findsNWidgets(2));
     expect(tester.getTopLeft(find.text('早上')).dy, greaterThan(trigger.bottom));
     await tester.tap(find.text('早上'));
     await tester.pumpAndSettle();
     expect(selected, 480);
-    expect(find.text('早上 · 08:00'), findsOneWidget);
+    expect(find.text('早上'), findsOneWidget);
     expect(find.text('中午'), findsNothing);
   });
   test('only plain daily frequencies receive suggestions', () {

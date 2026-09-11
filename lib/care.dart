@@ -631,10 +631,9 @@ class _TodayPageState extends State<TodayPage> {
         ),
         _note('短按听说明/记录体征 · 长按确认/撤销'),
         if (times.isNotEmpty)
-          Wrap(
-            spacing: 16,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               PeriodPicker(
                 times: times,
@@ -647,7 +646,7 @@ class _TodayPageState extends State<TodayPage> {
                 },
               ),
               Text(
-                '${DateTime.now().month}月${DateTime.now().day}日',
+                '${DateTime.now().month}/${DateTime.now().day}',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -676,8 +675,13 @@ class _TodayPageState extends State<TodayPage> {
             ),
           )
         else
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(28),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
