@@ -38,6 +38,8 @@ List<int> suggestedTimes(String frequency) {
 
 class CareStore extends ChangeNotifier {
   List<Medicine> prescription = [];
+  List<Map<String, dynamic>> prescriptions = [];
+  String? selectedPrescriptionId;
   List<Map<String, dynamic>> plan = [];
   List<Map<String, dynamic>> events = [];
   String? start, end, revision;
@@ -55,6 +57,20 @@ class CareStore extends ChangeNotifier {
         prescription = (data['prescription'] as List)
             .map((m) => readMedicine(Map<String, dynamic>.from(m)))
             .toList();
+        prescriptions = (data['prescriptions'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        selectedPrescriptionId = data['selectedPrescriptionId'];
+        if (!data.containsKey('prescriptions') && prescription.isNotEmpty) {
+          selectedPrescriptionId = 'legacy';
+          prescriptions = [
+            {
+              'id': 'legacy',
+              'date': null,
+              'medicines': prescription.map(medicineJson).toList(),
+            },
+          ];
+        }
         plan = (data['plan'] as List)
             .map((m) => Map<String, dynamic>.from(m))
             .toList();
@@ -79,6 +95,8 @@ class CareStore extends ChangeNotifier {
     if (loadFailed) return Future.value(false);
     final encoded = jsonEncode({
       'prescription': prescription.map(medicineJson).toList(),
+      'prescriptions': prescriptions,
+      'selectedPrescriptionId': selectedPrescriptionId,
       'plan': plan,
       'events': events,
       'start': start,
@@ -105,10 +123,55 @@ class CareStore extends ChangeNotifier {
     return result;
   }
 
-  Future<bool> savePrescription(List<Medicine> values) {
+  Future<bool> savePrescription(
+    List<Medicine> values, {
+    String? id,
+    DateTime? date,
+  }) async {
+    final oldRows = List<Map<String, dynamic>>.from(prescriptions);
+    final old = prescription;
+    final oldId = selectedPrescriptionId;
+    final key = id ?? DateTime.now().microsecondsSinceEpoch.toString();
+    final index = prescriptions.indexWhere((p) => p['id'] == key);
+    final row = {
+      'id': key,
+      'date':
+          date?.toIso8601String() ??
+          (index >= 0
+              ? prescriptions[index]['date']
+              : DateTime.now().toIso8601String()),
+      'medicines': values.map(medicineJson).toList(),
+    };
+    if (index >= 0) {
+      prescriptions[index] = row;
+    } else {
+      prescriptions.insert(0, row);
+    }
+    selectedPrescriptionId = key;
     prescription = values.map((m) => m.copy()).toList();
+    if (await persist()) return true;
+    prescriptions = oldRows;
+    prescription = old;
+    selectedPrescriptionId = oldId;
     notifyListeners();
-    return persist();
+    return false;
+  }
+
+  Future<bool> deletePrescription(String id) async {
+    final oldRows = List<Map<String, dynamic>>.from(prescriptions);
+    final old = prescription;
+    final oldId = selectedPrescriptionId;
+    prescriptions.removeWhere((p) => p['id'] == id);
+    if (selectedPrescriptionId == id) {
+      prescription = [];
+      selectedPrescriptionId = null;
+    }
+    if (await persist()) return true;
+    prescriptions = oldRows;
+    prescription = old;
+    selectedPrescriptionId = oldId;
+    notifyListeners();
+    return false;
   }
 
   Future<bool> setPlan(

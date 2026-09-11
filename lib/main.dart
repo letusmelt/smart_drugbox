@@ -1,3 +1,4 @@
+import 'prescription_library.dart';
 import 'model_picker.dart';
 import 'press_button.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -106,11 +107,16 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
     if (widget.store.prescription.isNotEmpty) saved = widget.store.prescription;
   }
 
-  Future<void> accept(List<Medicine> result) async {
-    setState(() => saved = result);
-    final stored = await widget.store.savePrescription(result);
-    if (!stored) return;
+  Future<void> accept(List<Medicine> result, {String? id}) async {
+    final stored = await widget.store.savePrescription(result, id: id);
     if (!mounted) return;
+    if (!stored) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(widget.store.error ?? '保存失败')));
+      return;
+    }
+    setState(() => saved = result);
     final add = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -145,46 +151,27 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
   }
 
   Future<void> openPrescriptions() async {
-    if (saved == null) {
-      showModalBottomSheet<void>(
-        context: context,
-        backgroundColor: canvas,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        builder: (context) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(CupertinoIcons.doc_text, size: 32, color: navy),
-                const SizedBox(height: 20),
-                const Text(
-                  '暂无处方',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  '添加后可在这里查看和修改。',
-                  style: TextStyle(color: muted, fontSize: 13),
-                ),
-                const SizedBox(height: 26),
-                primaryButton('添加第一张处方', () {
-                  Navigator.pop(context);
-                  start();
-                }),
-              ],
-            ),
-          ),
-        ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PrescriptionLibrary(store: widget.store),
+      ),
+    );
+    if (mounted) {
+      setState(
+        () => saved = widget.store.prescription.isEmpty
+            ? null
+            : widget.store.prescription,
       );
-      return;
     }
+  }
+
+  Future<void> openCurrent() async {
     final result = await Navigator.of(context).push<List<Medicine>>(
       CupertinoPageRoute(builder: (_) => ReviewPage(initial: saved)),
     );
-    if (result != null && mounted) await accept(result);
+    if (result != null && mounted) {
+      await accept(result, id: widget.store.selectedPrescriptionId);
+    }
   }
 
   @override
@@ -208,7 +195,6 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                 ),
               ),
               const SizedBox(height: 18),
-              const ModelPicker(),
               const SizedBox(height: 18),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -235,7 +221,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                           ),
                           SizedBox(height: 6),
                           Text(
-                            '拍摄医院纸质处方',
+                            '拍照或从相册选择',
                             style: TextStyle(
                               color: Color(0xFFBDC9DC),
                               fontSize: 13,
@@ -253,43 +239,22 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                       onPressed: start,
-                      child: const Text(
-                        '拍摄',
-                        style: TextStyle(
-                          color: navy,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: const Icon(
+                        CupertinoIcons.add,
+                        color: navy,
+                        size: 26,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: actionPill(
-                      CupertinoIcons.photo,
-                      '相册导入',
-                      () => start(source: ImageSource.gallery),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: actionPill(
-                      CupertinoIcons.doc_text,
-                      '我的处方',
-                      openPrescriptions,
-                    ),
-                  ),
-                ],
-              ),
+              actionPill(CupertinoIcons.folder, '我的处方', openPrescriptions),
               const SizedBox(height: 36),
               const Padding(
                 padding: EdgeInsets.fromLTRB(12, 0, 0, 10),
                 child: Text(
-                  '我的处方',
+                  '最近使用',
                   style: TextStyle(
                     color: muted,
                     fontSize: 15,
@@ -333,7 +298,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
                           horizontal: 24,
                           vertical: 23,
                         ),
-                        onPressed: openPrescriptions,
+                        onPressed: openCurrent,
                         child: Row(
                           children: [
                             Expanded(
