@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -18,11 +23,11 @@ class MedicineApp extends StatelessWidget {
       useMaterial3: true,
       scaffoldBackgroundColor: canvas,
       colorScheme: ColorScheme.fromSeed(seedColor: navy, primary: navy),
-      fontFamily: 'PingFang SC',
+      fontFamily: 'AppNotoSansSC',
       cupertinoOverrideTheme: const CupertinoThemeData(
         primaryColor: navy,
         textTheme: CupertinoTextThemeData(
-          textStyle: TextStyle(fontFamily: 'PingFang SC', color: ink),
+          textStyle: TextStyle(fontFamily: 'AppNotoSansSC', color: ink),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -55,9 +60,9 @@ class PrescriptionHome extends StatefulWidget {
 
 class _PrescriptionHomeState extends State<PrescriptionHome> {
   List<Medicine>? saved;
-  Future<void> start() async {
+  Future<void> start({ImageSource source = ImageSource.camera}) async {
     final result = await Navigator.of(context).push<List<Medicine>>(
-      CupertinoPageRoute(builder: (_) => const CapturePage()),
+      CupertinoPageRoute(builder: (_) => CapturePage(source: source)),
     );
     if (result != null && mounted) setState(() => saved = result);
   }
@@ -185,7 +190,11 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
               Row(
                 children: [
                   Expanded(
-                    child: actionPill(CupertinoIcons.photo, '相册导入', start),
+                    child: actionPill(
+                      CupertinoIcons.photo,
+                      '相册导入',
+                      () => start(source: ImageSource.gallery),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -282,7 +291,7 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  '演示版 · 暂未接入识别，处方仅本次运行保存',
+                  '处方仅在本次运行保存',
                   style: TextStyle(color: muted, fontSize: 11, height: 1.6),
                 ),
               ),
@@ -339,19 +348,125 @@ class StepLabel extends StatelessWidget {
 }
 
 class CapturePage extends StatefulWidget {
-  const CapturePage({super.key});
+  final ImageSource source;
+  const CapturePage({super.key, this.source = ImageSource.camera});
   @override
   State<CapturePage> createState() => _CapturePageState();
 }
 
 class _CapturePageState extends State<CapturePage> {
-  bool preview = false;
+  Uint8List? photo;
+  bool busy = false;
+  String? error;
+  Future<void> pick(ImageSource source) async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      final file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 2600,
+        maxHeight: 2600,
+        imageQuality: 92,
+        requestFullMetadata: false,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 10 * 1024 * 1024) {
+        throw Exception('照片超过 10 MB，请选择较小照片。');
+      }
+      final jpeg =
+          bytes.length > 3 &&
+          bytes[0] == 255 &&
+          bytes[1] == 216 &&
+          bytes[2] == 255;
+      final png =
+          bytes.length > 8 &&
+          listEquals(bytes.sublist(0, 8), [137, 80, 78, 71, 13, 10, 26, 10]);
+      if (!jpeg && !png) throw Exception('请使用 JPEG 或 PNG 照片，HEIC 请先转换。');
+      if (mounted) setState(() => photo = bytes);
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error =
+              '无法选择照片，请检查权限或改用相册。\n${e is Exception ? e.toString().replaceFirst('Exception: ', '') : ''}',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> recognize() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    const configured = String.fromEnvironment('API_BASE_URL');
+    final base = configured.isNotEmpty
+        ? configured
+        : kIsWeb
+        ? '${Uri.base.scheme}://${Uri.base.host}:8787'
+        : 'http://127.0.0.1:8787';
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$base/recognize'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'image': base64Encode(photo!)}),
+          )
+          .timeout(const Duration(seconds: 100));
+      final result =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      if (response.statusCode != 200) {
+        throw Exception(result['error'] ?? '识别失败，请重试。');
+      }
+      final rows = result['medicines'] as List;
+      if (rows.isEmpty) throw Exception('未识别到药品，请确认照片包含清晰的处方用药信息。');
+      final warnings = (result['warnings'] as List).cast<String>().join('\n');
+      final medicines = rows
+          .map(
+            (row) => Medicine(
+              row['name'] ?? '待确认',
+              row['dose'] ?? '待确认',
+              row['frequency'] ?? '待确认',
+              row['method'] ?? '待确认',
+              specification: row['specification'] ?? '待确认',
+              sourceText: row['source_text'] ?? '',
+              photo: photo,
+              warnings: warnings,
+            ),
+          )
+          .toList();
+      if (!mounted) return;
+      final saved = await Navigator.of(context).push<List<Medicine>>(
+        CupertinoPageRoute(builder: (_) => ReviewPage(initial: medicines)),
+      );
+      if (saved != null && mounted) Navigator.pop(context, saved);
+    } on TimeoutException {
+      if (mounted) setState(() => error = '识别超时，请稍后重试。');
+    } on http.ClientException {
+      if (mounted) setState(() => error = '无法连接识别服务，请确认电脑后端已启动，手机和电脑在同一网络。');
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error = e is FormatException || e is TypeError
+              ? '返回结果格式异常，请重试。'
+              : e.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(
-        preview ? '确认处方照片' : '拍摄处方',
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+      title: const Text(
+        '添加处方',
+        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
       ),
     ),
     body: SafeArea(
@@ -361,60 +476,83 @@ class _CapturePageState extends State<CapturePage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Text(
-                preview ? '确认照片' : '将整张处方放入取景框',
-                style: const TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                '保持纸张平整、光线充足，避免遮挡药品和用法。',
-                style: TextStyle(color: muted, fontSize: 13, height: 1.7),
-              ),
-              const SizedBox(height: 24),
               Container(
                 height: 365,
-                padding: const EdgeInsets.all(24),
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEEDE7),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFCAD4E2)),
+                  color: const Color(0xFFEBEDF0),
+                  borderRadius: BorderRadius.circular(28),
                 ),
-                child: const PrescriptionPaper(),
+                child: photo == null
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              CupertinoIcons.doc_text_viewfinder,
+                              size: 52,
+                              color: muted,
+                            ),
+                            SizedBox(height: 18),
+                            Text('拍摄或选择一张处方', style: TextStyle(color: muted)),
+                          ],
+                        ),
+                      )
+                    : InteractiveViewer(
+                        child: Image.memory(photo!, fit: BoxFit.contain),
+                      ),
               ),
-              const SizedBox(height: 18),
-              const Center(
-                child: Text(
-                  '界面演示 · 当前为示例处方，未启用相机或相册',
-                  style: TextStyle(fontSize: 11, color: muted),
+              const SizedBox(height: 20),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    error!,
+                    style: const TextStyle(
+                      color: Color(0xFFAA493E),
+                      height: 1.6,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 28),
+              if (busy)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CupertinoActivityIndicator()),
+                ),
               primaryButton(
-                preview ? '使用此照片，查看示例结果' : '模拟拍摄',
-                () async {
-                  if (!preview) {
-                    setState(() => preview = true);
-                    return;
-                  }
-                  final result = await Navigator.of(context)
-                      .push<List<Medicine>>(
-                        MaterialPageRoute(builder: (_) => const ReviewPage()),
-                      );
-                  if (result != null && context.mounted) {
-                    Navigator.pop(context, result);
-                  }
-                },
-                icon: preview
-                    ? CupertinoIcons.doc_text_search
-                    : CupertinoIcons.camera,
+                photo == null
+                    ? (widget.source == ImageSource.camera ? '拍摄处方' : '选择照片')
+                    : '识别并整理',
+                busy
+                    ? null
+                    : photo == null
+                    ? () => pick(widget.source)
+                    : recognize,
+                icon: photo == null
+                    ? CupertinoIcons.camera
+                    : CupertinoIcons.doc_text_search,
               ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => setState(() => preview = !preview),
-                child: Text(preview ? '重新拍摄' : '模拟从相册选择'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: busy ? null : () => pick(ImageSource.camera),
+                      child: Text(photo == null ? '使用相机' : '重新拍摄'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: busy ? null : () => pick(ImageSource.gallery),
+                      child: const Text('从相册选择'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '点击识别后，照片将发送至硅基流动进行处理。建议遮住姓名等个人信息，保留完整药品和用法。识别结果需对照原处方确认。',
+                style: TextStyle(color: muted, fontSize: 12, height: 1.8),
               ),
             ],
           ),
@@ -473,9 +611,28 @@ class PrescriptionPaper extends StatelessWidget {
 }
 
 class Medicine {
-  String name, dose, frequency, method;
-  Medicine(this.name, this.dose, this.frequency, this.method);
-  Medicine copy() => Medicine(name, dose, frequency, method);
+  String name, dose, frequency, method, specification, sourceText, warnings;
+  Uint8List? photo;
+  Medicine(
+    this.name,
+    this.dose,
+    this.frequency,
+    this.method, {
+    this.specification = '待确认',
+    this.sourceText = '',
+    this.warnings = '',
+    this.photo,
+  });
+  Medicine copy() => Medicine(
+    name,
+    dose,
+    frequency,
+    method,
+    specification: specification,
+    sourceText: sourceText,
+    warnings: warnings,
+    photo: photo,
+  );
 }
 
 class ReviewPage extends StatefulWidget {
@@ -491,12 +648,7 @@ class _ReviewPageState extends State<ReviewPage> {
   @override
   void initState() {
     super.initState();
-    medicines =
-        widget.initial?.map((m) => m.copy()).toList() ??
-        [
-          Medicine('示例药品 A', '每次 1 片（示例）', '每日 2 次（示例）', '口服 · 饭后（示例）'),
-          Medicine('示例药品 B', '每次 1 袋（示例）', '每日 1 次（示例）', '冲服（示例）'),
-        ];
+    medicines = widget.initial?.map((m) => m.copy()).toList() ?? [];
   }
 
   Future<void> edit(int index) async {
@@ -506,6 +658,7 @@ class _ReviewPageState extends State<ReviewPage> {
       m.dose,
       m.frequency,
       m.method,
+      m.specification,
     ].map((s) => TextEditingController(text: s)).toList();
     final accepted = await showModalBottomSheet<bool>(
       context: context,
@@ -532,13 +685,13 @@ class _ReviewPageState extends State<ReviewPage> {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 20),
-                for (var i = 0; i < 4; i++)
+                for (var i = 0; i < 5; i++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: TextField(
                       controller: controllers[i],
                       decoration: InputDecoration(
-                        labelText: ['药品名称', '每次用量', '服用频次', '服用方式'][i],
+                        labelText: ['药品名称', '每次用量', '服用频次', '服用方式', '药品规格'][i],
                       ),
                     ),
                   ),
@@ -560,6 +713,10 @@ class _ReviewPageState extends State<ReviewPage> {
           controllers[1].text.trim(),
           controllers[2].text.trim(),
           controllers[3].text.trim(),
+          specification: controllers[4].text.trim(),
+          sourceText: m.sourceText,
+          photo: m.photo,
+          warnings: m.warnings,
         );
         confirmed = false;
       });
@@ -609,7 +766,7 @@ class _ReviewPageState extends State<ReviewPage> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '以下为演示数据，尚未接入处方识别。\n实际用药请以医生处方为准。',
+                        '识别结果可能有误，请逐项核对。\n“待确认”表示未识别清楚，不要据此安排用药。',
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.7,
@@ -631,11 +788,20 @@ class _ReviewPageState extends State<ReviewPage> {
                   TextButton(
                     onPressed: () => showModalBottomSheet<void>(
                       context: context,
-                      builder: (_) => const Padding(
-                        padding: EdgeInsets.all(30),
+                      builder: (_) => Padding(
+                        padding: const EdgeInsets.all(24),
                         child: SizedBox(
-                          height: 370,
-                          child: PrescriptionPaper(),
+                          height: 450,
+                          child:
+                              medicines.isNotEmpty &&
+                                  medicines.first.photo != null
+                              ? InteractiveViewer(
+                                  child: Image.memory(
+                                    medicines.first.photo!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : const Center(child: Text("原照片不可用")),
                         ),
                       ),
                     ),
@@ -690,10 +856,23 @@ class _ReviewPageState extends State<ReviewPage> {
                       ),
                       const SizedBox(height: 10),
                       const Divider(color: canvas),
+                      detail('药品规格', medicines[i].specification),
                       detail('每次用量', medicines[i].dose),
                       detail('服用频次', medicines[i].frequency),
                       detail('服用方式', medicines[i].method),
+                      detail('对应原文', medicines[i].sourceText),
                     ],
+                  ),
+                ),
+              if (medicines.isNotEmpty && medicines.first.warnings.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    medicines.first.warnings,
+                    style: const TextStyle(
+                      color: Color(0xFFAA493E),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               const SizedBox(height: 8),
@@ -710,7 +889,9 @@ class _ReviewPageState extends State<ReviewPage> {
               const SizedBox(height: 12),
               primaryButton(
                 '确认并保存',
-                confirmed ? () => Navigator.pop(context, medicines) : null,
+                confirmed && medicines.isNotEmpty
+                    ? () => Navigator.pop(context, medicines)
+                    : null,
                 icon: CupertinoIcons.checkmark_alt,
               ),
               const SizedBox(height: 12),
