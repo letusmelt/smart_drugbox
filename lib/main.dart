@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 
 void main() => runApp(const MedicineApp());
 
+const appFontFamily = 'PingFang SC';
+
 const navy = Color(0xFF142F56);
 const ink = Color(0xFF1C304B);
 const muted = Color(0xFF8B929A);
@@ -21,7 +23,7 @@ const canvas = Color(0xFFF0F9FD);
 
 TextTheme spacedTextTheme() {
   final base = ThemeData().textTheme.apply(
-    fontFamily: 'AppNotoSansSC',
+    fontFamily: appFontFamily,
     bodyColor: ink,
     displayColor: ink,
   );
@@ -57,12 +59,12 @@ class MedicineApp extends StatelessWidget {
       useMaterial3: true,
       scaffoldBackgroundColor: canvas,
       colorScheme: ColorScheme.fromSeed(seedColor: navy, primary: navy),
-      fontFamily: 'AppNotoSansSC',
+      fontFamily: appFontFamily,
       cupertinoOverrideTheme: const CupertinoThemeData(
         primaryColor: navy,
         textTheme: CupertinoTextThemeData(
           textStyle: TextStyle(
-            fontFamily: 'AppNotoSansSC',
+            fontFamily: appFontFamily,
             color: ink,
             letterSpacing: 0.55,
           ),
