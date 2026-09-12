@@ -555,16 +555,6 @@ class _TodayPageState extends State<TodayPage> {
     final ok = await widget.store.mark(e['id'], taken);
     if (!mounted || !ok) return;
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${e['name']} · ${taken ? '已确认服用' : '已撤销服用'}'),
-        action: SnackBarAction(
-          label: '撤销',
-          onPressed: () => widget.store.mark(e['id'], !taken),
-        ),
-      ),
-    );
   }
 
   @override
