@@ -82,7 +82,9 @@ class CareStore extends ChangeNotifier {
         revision = data['revision'];
         created = DateTime.tryParse(data['created'] ?? '');
       }
+      final synced = _syncEventsFromPlan(plan);
       refresh();
+      if (synced) await persist();
     } catch (_) {
       loadFailed = true;
       error = '本机数据读取失败，请勿继续设置，先重新打开页面。';
@@ -180,6 +182,7 @@ class CareStore extends ChangeNotifier {
     DateTime? until,
   ) async {
     final now = DateTime.now();
+    _syncEventsFromPlan(rows);
     // Keep historical snapshots, remove only future pending items of the replaced plan.
     events.removeWhere(
       (e) => e['taken'] == null && DateTime.parse(e['due']).isAfter(now),
@@ -192,6 +195,29 @@ class CareStore extends ChangeNotifier {
     refresh(now: now, save: false);
     notifyListeners();
     return persist();
+  }
+
+  bool _syncEventsFromPlan(List<Map<String, dynamic>> rows) {
+    var changed = false;
+    for (final event in events) {
+      final matching = rows.where((row) => row['slot'] == event['slot']);
+      if (matching.isEmpty) continue;
+      final updated = matching.first;
+      final preserved = {
+        'id': event['id'],
+        'day': event['day'],
+        'minute': event['minute'],
+        'due': event['due'],
+        'taken': event['taken'],
+        if (event.containsKey('vitals')) 'vitals': event['vitals'],
+      };
+      event
+        ..clear()
+        ..addAll(updated)
+        ..addAll(preserved);
+      changed = true;
+    }
+    return changed;
   }
 
   void refresh({DateTime? now, bool save = true}) {

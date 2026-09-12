@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:smart_drugbox/period_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -169,6 +171,105 @@ void main() {
     expect(store.events.length, 1);
     expect(store.events.single['minute'], 1080);
   });
+  test(
+    'updating a plan refreshes medicine details and preserves records',
+    () async {
+      final store = CareStore();
+      await store.load();
+      final now = DateTime.now();
+      final today = dayKey(now);
+      final due = DateTime(now.year, now.month, now.day, 0, 1);
+      store.events = [
+        {
+          'id': 'old/$today/0/1',
+          'day': today,
+          'minute': 1,
+          'due': due.toIso8601String(),
+          'slot': 0,
+          'times': [1],
+          'name': '旧药名',
+          'dose': '旧剂量',
+          'method': '旧用法',
+          'taken': now.toIso8601String(),
+          'vitals': {'note': '正常'},
+        },
+      ];
+
+      await store.setPlan(
+        [
+          {
+            'slot': 0,
+            'times': [1],
+            'name': '新药名',
+            'dose': '新剂量',
+            'method': '新用法',
+            'frequency': '每日一次',
+          },
+        ],
+        DateTime(now.year, now.month, now.day),
+        null,
+      );
+
+      expect(store.events.single['name'], '新药名');
+      expect(store.events.single['dose'], '新剂量');
+      expect(store.events.single['taken'], isNotNull);
+      expect(store.events.single['vitals'], {'note': '正常'});
+    },
+  );
+  test(
+    'loading repairs stale historical events from the current plan',
+    () async {
+      final now = DateTime.now();
+      final historicalDay = dayKey(now.subtract(const Duration(days: 2)));
+      SharedPreferences.setMockInitialValues({
+        'care.v1': jsonEncode({
+          'prescription': [],
+          'prescriptions': [],
+          'plan': [
+            {
+              'slot': 0,
+              'times': [1],
+              'name': '已编辑药名',
+              'dose': '新剂量',
+              'method': '新用法',
+            },
+          ],
+          'events': [
+            {
+              'id': 'old/$historicalDay/0/1',
+              'day': historicalDay,
+              'minute': 1,
+              'due': DateTime(
+                now.year,
+                now.month,
+                now.day - 2,
+                0,
+                1,
+              ).toIso8601String(),
+              'slot': 0,
+              'times': [1],
+              'name': '旧药名',
+              'dose': '旧剂量',
+              'method': '旧用法',
+              'taken': null,
+            },
+          ],
+          'start': historicalDay,
+          'revision': 'old',
+          'created': DateTime(now.year, now.month, now.day).toIso8601String(),
+        }),
+      });
+
+      final store = CareStore();
+      await store.load();
+
+      final historicalEvent = store.events.singleWhere(
+        (event) => event['day'] == historicalDay && event['minute'] == 1,
+      );
+      expect(historicalEvent['name'], '已编辑药名');
+      expect(historicalEvent['dose'], '新剂量');
+    },
+  );
   test('prescription text persists without storing large photos', () async {
     final store = CareStore();
     await store.load();
