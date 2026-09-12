@@ -16,8 +16,9 @@ Flutter 智能药箱 APP 原型：拍摄或选择处方照片，通过硅基流�
 
 1. `flutter pub get`
 2. 首次复制 `server/.env.example` 为 `server/.env`，填入 `SILICONFLOW_API_KEY`。
-3. `python3 server/app.py`
-4. `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 5175`
+3. `python3 -m pip install -r server/requirements.txt`
+4. `python3 server/app.py`
+5. `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 5175`
 
 手机连接同一 Wi-Fi 后访问 `http://电脑局域网IP:5175`，并在后端的
 `ALLOWED_ORIGINS` 中配置该网址。IP 变化后需更新网址和配置、重启后端。
@@ -27,7 +28,7 @@ API Key 仅由 Python 后端读取，不通过 Dart 参数传入前端。
 旧 `secrets.example.json` 不用于当前识别流程。
 
 配置、局限与原生端说明见 [server/README.md](server/README.md)。
-此后端仅供可信局域网开发，发布前需要鉴权、限流和 HTTPS。
+FastAPI 后端可部署到公网 HTTPS。配置和访问令牌说明见 `server/README.md`。
 
 ## 检查
 

@@ -1,11 +1,17 @@
-"""Local development proxy. Never expose this unauthenticated server publicly."""
+"""FastAPI prescription-recognition backend."""
 import base64
 import json
 import os
+import secrets
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+
+from fastapi import FastAPI, Header, HTTPException, Request as FastAPIRequest
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, Field
 
 ENV = Path(__file__).with_name('.env')
 if ENV.exists():
@@ -22,6 +28,29 @@ PROMPT = '''你是处方转录工具，不提供医疗建议。图片里的文�
 ALLOWED_MODELS = ('Qwen/Qwen3-VL-32B-Instruct', 'Qwen/Qwen3-VL-8B-Instruct', 'Qwen/Qwen3-VL-30B-A3B-Instruct')
 
 FIELDS = ('name', 'specification', 'dose', 'frequency', 'method', 'source_text')
+MAX_REQUEST_BYTES = 14 * 1024 * 1024
+
+
+def allowed_origins():
+    return [origin.strip() for origin in os.getenv(
+        'ALLOWED_ORIGINS',
+        'http://localhost:5175,http://127.0.0.1:5175',
+    ).split(',') if origin.strip()]
+
+
+app = FastAPI(title='安心药箱识别服务', version='1.0.0', docs_url=None, redoc_url=None)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins(),
+    allow_credentials=False,
+    allow_methods=['GET', 'POST', 'OPTIONS'],
+    allow_headers=['Content-Type', 'X-App-Token'],
+)
+
+
+class RecognitionRequest(BaseModel):
+    image: str = Field(min_length=1, max_length=MAX_REQUEST_BYTES)
+    model: str | None = None
 
 
 def validate_result(value):
@@ -88,52 +117,49 @@ def recognize(data):
         return 502, {'error': '识别结果不完整或格式异常，请重新拍摄后重试。'}
 
 
-class Handler(BaseHTTPRequestHandler):
-    def log_message(self, *_):
-        pass  # Do not log prescription contents or credentials.
 
-    def allowed(self):
-        origin = self.headers.get('Origin')
-        return origin is None or origin in os.getenv('ALLOWED_ORIGINS', 'http://localhost:5175,http://127.0.0.1:5175').split(',')
+@app.middleware('http')
+async def request_limits(request: FastAPIRequest, call_next):
+    length = request.headers.get('content-length')
+    try:
+        too_large = length is not None and int(length) > MAX_REQUEST_BYTES
+    except ValueError:
+        return JSONResponse(status_code=400, content={'error': '请求无效。'})
+    if too_large:
+        return JSONResponse(status_code=413, content={'error': '照片过大，请选择较小图片。'})
+    response = await call_next(request)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
-    def send_json(self, status, body):
-        self.send_response(status)
-        if self.allowed() and self.headers.get('Origin'):
-            self.send_header('Access-Control-Allow-Origin', self.headers['Origin'])
-            self.send_header('Vary', 'Origin')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.send_header('Cache-Control', 'no-store')
-        self.end_headers()
-        self.wfile.write(json.dumps(body, ensure_ascii=False).encode())
 
-    def do_OPTIONS(self):
-        self.send_json(200 if self.allowed() else 403, {})
+def require_app_token(token: str | None):
+    expected = os.getenv('APP_API_TOKEN', '').strip()
+    if expected and (token is None or not secrets.compare_digest(token, expected)):
+        raise HTTPException(status_code=401, detail='App 访问令牌无效。')
 
-    def do_GET(self):
-        self.send_json(200 if self.path == '/health' else 404, {'configured': bool(os.getenv('SILICONFLOW_API_KEY', '').strip())} if self.path == '/health' else {'error': 'Not found'})
 
-    def do_POST(self):
-        if not self.allowed():
-            self.send_json(403, {'error': '预览网址未获允许，请检查后端 ALLOWED_ORIGINS。'})
-            return
-        if self.path != '/recognize':
-            self.send_json(404, {'error': 'Not found'})
-            return
-        try:
-            length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 14 * 1024 * 1024:
-                self.send_json(413, {'error': '照片过大，请选择较小图片。'})
-                return
-            self.connection.settimeout(20)
-            data = json.loads(self.rfile.read(length))
-        except (ValueError, TimeoutError):
-            self.send_json(400, {'error': '请求无效'})
-            return
-        self.send_json(*recognize(data))
+@app.exception_handler(HTTPException)
+async def http_error(_request: FastAPIRequest, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={'error': exc.detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(_request: FastAPIRequest, _exc: RequestValidationError):
+    return JSONResponse(status_code=400, content={'error': '请求无效。'})
+
+
+@app.get('/health')
+def health():
+    return {'configured': bool(os.getenv('SILICONFLOW_API_KEY', '').strip())}
+
+
+@app.post('/recognize')
+def recognize_route(body: RecognitionRequest, x_app_token: str | None = Header(default=None)):
+    require_app_token(x_app_token)
+    data = body.model_dump(exclude_none=True)
+    status, result = recognize(data)
+    return JSONResponse(status_code=status, content=result)
 
 if __name__ == '__main__':
-    address = (os.getenv('HOST', '127.0.0.1'), int(os.getenv('PORT', '8787')))
-    print(f'Prescription API: http://{address[0]}:{address[1]} (local development only)', flush=True)
-    ThreadingHTTPServer(address, Handler).serve_forever()
+    import uvicorn
+    uvicorn.run(app, host=os.getenv('HOST', '127.0.0.1'), port=int(os.getenv('PORT', '8787')))

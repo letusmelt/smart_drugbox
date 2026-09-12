@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
 import app
+from fastapi.testclient import TestClient
 
 
 class RecognitionTests(unittest.TestCase):
@@ -69,3 +70,20 @@ class ModelSelectionTests(unittest.TestCase):
         with patch.dict(os.environ, {'SILICONFLOW_API_KEY': 'test'}), patch('app.urlopen') as call:
             self.assertEqual(app.recognize({'image': 'anything', 'model': 'unknown'})[0], 400)
             call.assert_not_called()
+
+
+class FastAPITests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app.app)
+
+    def test_health(self):
+        response = self.client.get('/health')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('configured', response.json())
+
+    def test_app_token_is_required_when_configured(self):
+        image = base64.b64encode(b'\xff\xd8\xfftest').decode()
+        with patch.dict(os.environ, {'APP_API_TOKEN': 'private-token'}):
+            response = self.client.post('/recognize', json={'image': image})
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn('private-token', response.text)

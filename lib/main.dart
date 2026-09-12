@@ -476,7 +476,11 @@ class _CapturePageState extends State<CapturePage> {
       final response = await http
           .post(
             Uri.parse('$base/recognize'),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (const String.fromEnvironment('APP_API_TOKEN').isNotEmpty)
+                'X-App-Token': const String.fromEnvironment('APP_API_TOKEN'),
+            },
             body: jsonEncode({
               'image': base64Encode(photo!),
               'model': recognitionModel.value,
