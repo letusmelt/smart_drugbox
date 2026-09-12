@@ -30,6 +30,8 @@ API Key 仅由 Python 后端读取，不通过 Dart 参数传入前端。
 配置、局限与原生端说明见 [server/README.md](server/README.md)。
 FastAPI 后端可部署到公网 HTTPS。配置和访问令牌说明见 `server/README.md`。
 
+`cloudflare-worker/` 提供与 FastAPI 相同的 `/health` 和 `/recognize` 公网接口，供真机通过 HTTPS 调用。
+
 ## 检查
 
 ```sh

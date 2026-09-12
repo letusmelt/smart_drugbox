@@ -467,26 +467,45 @@ class _CapturePageState extends State<CapturePage> {
       error = null;
     });
     const configured = String.fromEnvironment('API_BASE_URL');
-    final base = configured.isNotEmpty
+    const configuredLocal = String.fromEnvironment('LOCAL_API_BASE_URL');
+    final primaryBase = configured.isNotEmpty
         ? configured
         : kIsWeb
         ? '${Uri.base.scheme}://${Uri.base.host}:8787'
         : 'http://yuedeMac-mini.local:8787';
+    final localBase = configuredLocal.isNotEmpty
+        ? configuredLocal
+        : kIsWeb
+        ? '${Uri.base.scheme}://${Uri.base.host}:8787'
+        : 'http://yuedeMac-mini.local:8787';
+    final requestBody = jsonEncode({
+      'image': base64Encode(photo!),
+      'model': recognitionModel.value,
+    });
+
+    Future<http.Response> sendRequest(String base) => http
+        .post(
+          Uri.parse('$base/recognize'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (const String.fromEnvironment('APP_API_TOKEN').isNotEmpty)
+              'X-App-Token': const String.fromEnvironment('APP_API_TOKEN'),
+          },
+          body: requestBody,
+        )
+        .timeout(const Duration(seconds: 100));
+
     try {
-      final response = await http
-          .post(
-            Uri.parse('$base/recognize'),
-            headers: {
-              'Content-Type': 'application/json',
-              if (const String.fromEnvironment('APP_API_TOKEN').isNotEmpty)
-                'X-App-Token': const String.fromEnvironment('APP_API_TOKEN'),
-            },
-            body: jsonEncode({
-              'image': base64Encode(photo!),
-              'model': recognitionModel.value,
-            }),
-          )
-          .timeout(const Duration(seconds: 100));
+      late http.Response response;
+      try {
+        response = await sendRequest(primaryBase);
+      } on TimeoutException {
+        if (localBase == primaryBase) rethrow;
+        response = await sendRequest(localBase);
+      } on http.ClientException {
+        if (localBase == primaryBase) rethrow;
+        response = await sendRequest(localBase);
+      }
       final result =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode != 200) {
@@ -515,9 +534,11 @@ class _CapturePageState extends State<CapturePage> {
       );
       if (saved != null && mounted) Navigator.pop(context, saved);
     } on TimeoutException {
-      if (mounted) setState(() => error = '识别超时，请稍后重试。');
+      if (mounted) setState(() => error = '公网与本地识别服务均连接超时，请稍后重试。');
     } on http.ClientException {
-      if (mounted) setState(() => error = '无法连接识别服务，请确认电脑后端已启动，手机和电脑在同一网络。');
+      if (mounted) {
+        setState(() => error = '无法连接公网或本地识别服务，请确认电脑后端已启动，且手机与电脑连接同一 Wi-Fi。');
+      }
     } catch (e) {
       if (mounted) {
         setState(

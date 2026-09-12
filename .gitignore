@@ -53,3 +53,8 @@ secrets.json
 !.env.example
 __pycache__/
 .venv/
+.wrangler/
+cloudflare-worker/node_modules/
+server/.app_api_token
+cloudflare-app-config.json
+aliyun-app-config.json
