@@ -71,6 +71,14 @@ void main() {
       (container.decoration as BoxDecoration).color,
       isNot(const Color(0xFFE8E9EB)),
     );
+    final titleTop = tester.getTopLeft(find.text('今日用药')).dy;
+    final progressTop = tester.getTopLeft(find.text('吃药进度 0/0')).dy;
+    final firstTileTop = tester.getTopLeft(tiles.first).dy;
+    await tester.drag(tiles.first, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('今日用药')).dy, titleTop);
+    expect(tester.getTopLeft(find.text('吃药进度 0/0')).dy, progressTop);
+    expect(tester.getTopLeft(tiles.first).dy, lessThan(firstTileTop));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

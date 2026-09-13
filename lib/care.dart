@@ -586,199 +586,255 @@ class _TodayPageState extends State<TodayPage> {
     }
     final current = events.where((e) => e['minute'] == selected).toList();
     final count = current.where((e) => e['taken'] != null).length;
-    return SafeArea(
-      child: _frame([
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                '今日用药',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: '设置每日安排',
-              onPressed: widget.store.prescription.isEmpty
-                  ? null
-                  : () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SchedulePage(
-                          store: widget.store,
-                          medicines: widget.store.prescription,
-                        ),
-                      ),
-                    ),
-              icon: const Icon(
-                CupertinoIcons.slider_horizontal_3,
-                color: _navy,
-              ),
-            ),
-          ],
-        ),
-        _note('短按听说明/记录体征 · 长按确认/撤销'),
-        if (times.isNotEmpty)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              PeriodPicker(
-                times: times,
-                selected: selected!,
-                onSelected: (time) {
-                  tts.stop();
-                  setState(() {
-                    selected = time;
-                  });
-                },
-              ),
-              Text(
-                '${DateTime.now().month}/${DateTime.now().day}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: _navy,
-                ),
-              ),
-            ],
+    void editSchedule() {
+      if (widget.store.prescription.isEmpty) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SchedulePage(
+            store: widget.store,
+            medicines: widget.store.prescription,
           ),
-        const SizedBox(height: 16),
-        if (times.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: _group,
-              borderRadius: BorderRadius.circular(26),
-            ),
-            child: Text(
-              widget.store.plan.isEmpty
-                  ? '请在“处方”中设置每日提醒'
-                  : '今天没有待执行的安排\n新设置的提醒从下一个服用时间开始',
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.6,
-                color: Colors.black87,
-              ),
-            ),
-          )
-        else
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(28),
-            ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 26, 20, 0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '吃药进度 $count/${current.length}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF326BD1),
+                const Text(
+                  '今日用药',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
                 ),
-                if (current.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  for (var row = 0; row < 2; row++)
-                    if (row * ((current.length + 1) ~/ 2) < current.length)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            for (final event
-                                in current
-                                    .skip(row * ((current.length + 1) ~/ 2))
-                                    .take((current.length + 1) ~/ 2))
-                              Semantics(
-                                label:
-                                    '${event['name']}：${event['taken'] == null ? '未服用' : '已服用'}',
-                                child: Container(
-                                  width: 13,
-                                  height: 13,
-                                  margin: const EdgeInsets.only(right: 10),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: event['taken'] == null
-                                        ? _navy
-                                        : const Color(0xFFC4CDD4),
-                                  ),
+                _note('短按听说明/记录体征 · 长按确认/撤销'),
+                if (times.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      PeriodPicker(
+                        times: times,
+                        selected: selected!,
+                        onSelected: (time) {
+                          tts.stop();
+                          setState(() {
+                            selected = time;
+                          });
+                        },
+                      ),
+                      Text(
+                        '${DateTime.now().month}/${DateTime.now().day}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: _navy,
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                if (times.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: _group,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Text(
+                      widget.store.plan.isEmpty
+                          ? '请在“处方”中设置每日提醒'
+                          : '今天没有待执行的安排\n新设置的提醒从下一个服用时间开始',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.6,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '吃药进度 $count/${current.length}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF326BD1),
                                 ),
                               ),
-                          ],
+                              if (current.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                for (var row = 0; row < 2; row++)
+                                  if (row * ((current.length + 1) ~/ 2) <
+                                      current.length)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          for (final event
+                                              in current
+                                                  .skip(
+                                                    row *
+                                                        ((current.length + 1) ~/
+                                                            2),
+                                                  )
+                                                  .take(
+                                                    (current.length + 1) ~/ 2,
+                                                  ))
+                                            Semantics(
+                                              label:
+                                                  '${event['name']}：${event['taken'] == null ? '未服用' : '已服用'}',
+                                              child: Container(
+                                                width: 13,
+                                                height: 13,
+                                                margin: const EdgeInsets.only(
+                                                  right: 10,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: event['taken'] == null
+                                                      ? _navy
+                                                      : const Color(0xFFC4CDD4),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                              ] else
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    '此时段没有待服用任务',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: _muted,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                ] else
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      '此时段没有待服用任务',
-                      style: TextStyle(fontSize: 13, color: _muted),
+                        const SizedBox(width: 12),
+                        Semantics(
+                          button: true,
+                          label: '编辑每日用药计划',
+                          child: IconButton(
+                            tooltip: '编辑每日用药计划',
+                            onPressed: widget.store.prescription.isEmpty
+                                ? null
+                                : editSchedule,
+                            style: IconButton.styleFrom(
+                              fixedSize: const Size.square(64),
+                              backgroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.white54,
+                              foregroundColor: _navy,
+                              shape: const CircleBorder(),
+                            ),
+                            icon: const Icon(CupertinoIcons.pencil, size: 28),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.only(
+                      top: times.isEmpty ? 16 : 0,
+                      bottom: 28,
+                    ),
+                    children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) => Column(
+                          children: List.generate(8, (slot) {
+                            final matches = current
+                                .where((e) => e['slot'] == slot)
+                                .toList();
+                            final e = matches.isEmpty ? null : matches.first;
+                            final planned = widget.store.plan
+                                .where((e) => e['slot'] == slot)
+                                .toList();
+                            final name =
+                                e?['name'] ??
+                                (planned.isEmpty
+                                    ? '未设置药品'
+                                    : planned.first['name']);
+                            final preview =
+                                e == null &&
+                                planApplies &&
+                                planned.isNotEmpty &&
+                                (planned.first['times'] as List).contains(
+                                  selected,
+                                );
+                            if (e == null && !preview) {
+                              return const SizedBox.shrink();
+                            }
+                            final taken = e?['taken'] != null;
+                            final text = e == null
+                                ? preview
+                                      ? '$name，${boxNames[slot]}${slot + 1}号药格。这个时间在今天的安排启用之前，仅供查看，无需补服。'
+                                      : '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
+                                : '${e['name']}，${boxNames[slot]}${slot + 1}号药格，${e['dose']}，${e['method']}。${taken ? '本次已确认服用，请勿重复服用。' : ''}';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: DoseTile(
+                                key: ValueKey('${e?['id'] ?? slot}/$selected'),
+                                slot: slot,
+                                name: name,
+                                dose: e?['dose'],
+                                inactiveLabel: preview ? '安排启用前 · 仅供查看' : null,
+                                taken: taken,
+                                scheduled: e != null,
+                                takenTime: taken
+                                    ? clockText(
+                                        DateTime.parse(e!['taken']).hour * 60 +
+                                            DateTime.parse(e['taken']).minute,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  if (taken) {
+                                    tts.stop();
+                                    showVitalsSheet(context, widget.store, e!);
+                                  } else {
+                                    speak(text);
+                                  }
+                                },
+                                onHold: e == null ? null : () => mark(e),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      _note('已确认表示手动确认，不代表药箱检测结果。'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-        LayoutBuilder(
-          builder: (context, constraints) => Column(
-            children: List.generate(8, (slot) {
-              final matches = current.where((e) => e['slot'] == slot).toList();
-              final e = matches.isEmpty ? null : matches.first;
-              final planned = widget.store.plan
-                  .where((e) => e['slot'] == slot)
-                  .toList();
-              final name =
-                  e?['name'] ??
-                  (planned.isEmpty ? '未设置药品' : planned.first['name']);
-              final preview =
-                  e == null &&
-                  planApplies &&
-                  planned.isNotEmpty &&
-                  (planned.first['times'] as List).contains(selected);
-              if (e == null && !preview) return const SizedBox.shrink();
-              final taken = e?['taken'] != null;
-              final text = e == null
-                  ? preview
-                        ? '$name，${boxNames[slot]}${slot + 1}号药格。这个时间在今天的安排启用之前，仅供查看，无需补服。'
-                        : '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
-                  : '${e['name']}，${boxNames[slot]}${slot + 1}号药格，${e['dose']}，${e['method']}。${taken ? '本次已确认服用，请勿重复服用。' : ''}';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: DoseTile(
-                  key: ValueKey('${e?['id'] ?? slot}/$selected'),
-                  slot: slot,
-                  name: name,
-                  dose: e?['dose'],
-                  inactiveLabel: preview ? '安排启用前 · 仅供查看' : null,
-                  taken: taken,
-                  scheduled: e != null,
-                  takenTime: taken
-                      ? clockText(
-                          DateTime.parse(e!['taken']).hour * 60 +
-                              DateTime.parse(e['taken']).minute,
-                        )
-                      : null,
-                  onTap: () {
-                    if (taken) {
-                      tts.stop();
-                      showVitalsSheet(context, widget.store, e!);
-                    } else {
-                      speak(text);
-                    }
-                  },
-                  onHold: e == null ? null : () => mark(e),
-                ),
-              );
-            }),
-          ),
         ),
-        _note('已确认表示手动确认，不代表药箱检测结果。'),
-      ]),
+      ),
     );
   }
 }
