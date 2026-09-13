@@ -132,33 +132,39 @@ class _AppTabsState extends State<AppTabs> with WidgetsBindingObserver {
               ],
             ),
       bottomNavigationBar: CupertinoTabBar(
-        height: 62,
-        iconSize: 22,
+        height: 48,
+        iconSize: 23,
         currentIndex: tab,
         activeColor: _navy,
         backgroundColor: const Color(0xFFF0F9FD),
         onTap: (value) => setState(() => tab = value),
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 7, bottom: 3),
-              child: Icon(CupertinoIcons.doc_text),
+            icon: Semantics(
+              label: '处方标签页',
+              child: Transform.translate(
+                offset: const Offset(0, 5),
+                child: const Icon(CupertinoIcons.doc_text),
+              ),
             ),
-            label: '处方',
           ),
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 7, bottom: 3),
-              child: Icon(CupertinoIcons.square_grid_2x2),
+            icon: Semantics(
+              label: '今日用药标签页',
+              child: Transform.translate(
+                offset: const Offset(0, 5),
+                child: const Icon(CupertinoIcons.square_grid_2x2),
+              ),
             ),
-            label: '今日用药',
           ),
           BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 7, bottom: 3),
-              child: Icon(CupertinoIcons.calendar),
+            icon: Semantics(
+              label: '用药记录标签页',
+              child: Transform.translate(
+                offset: const Offset(0, 5),
+                child: const Icon(CupertinoIcons.calendar),
+              ),
             ),
-            label: '用药记录',
           ),
         ],
       ),
@@ -610,7 +616,7 @@ class _TodayPageState extends State<TodayPage> {
                   '今日用药',
                   style: TextStyle(
                     fontSize: 26,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: Colors.black87,
                   ),
                 ),
@@ -1111,9 +1117,9 @@ class _RecordPageState extends State<RecordPage> {
         const Text(
           '用药记录',
           style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
-            color: _navy,
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 22),

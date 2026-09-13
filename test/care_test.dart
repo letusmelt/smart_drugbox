@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:smart_drugbox/period_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,11 +19,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const MedicineApp());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('今日用药').last);
+    await tester.tap(find.byIcon(CupertinoIcons.square_grid_2x2));
     await tester.pumpAndSettle();
     expect(find.text('请在“处方”中设置每日提醒'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('用药记录').last);
+    await tester.tap(find.byIcon(CupertinoIcons.calendar));
     await tester.pumpAndSettle();
     expect(find.text('这一天没有用药安排记录'), findsOneWidget);
     expect(tester.takeException(), isNull);

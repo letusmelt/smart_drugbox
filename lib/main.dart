@@ -186,13 +186,13 @@ class _PrescriptionHomeState extends State<PrescriptionHome> {
             padding: const EdgeInsets.fromLTRB(20, 38, 20, 32),
             children: [
               const Padding(
-                padding: EdgeInsets.only(left: 10),
+                padding: EdgeInsets.zero,
                 child: Text(
                   '处方',
                   style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: navy,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
                   ),
                 ),
               ),
