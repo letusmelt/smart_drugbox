@@ -585,7 +585,6 @@ class _TodayPageState extends State<TodayPage> {
           : times.firstWhere((t) => t >= minute, orElse: () => times.last);
     }
     final current = events.where((e) => e['minute'] == selected).toList();
-    final count = current.where((e) => e['taken'] != null).length;
     void editSchedule() {
       if (widget.store.prescription.isEmpty) return;
       Navigator.of(context).push(
@@ -615,7 +614,7 @@ class _TodayPageState extends State<TodayPage> {
                     color: Colors.black87,
                   ),
                 ),
-                _note('短按听说明/记录体征 · 长按确认/撤销'),
+                const SizedBox(height: 22),
                 if (times.isNotEmpty)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -673,67 +672,52 @@ class _TodayPageState extends State<TodayPage> {
                       children: [
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '吃药进度 $count/${current.length}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF326BD1),
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(2, (row) {
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: row == 0 ? 12 : 0,
                                 ),
-                              ),
-                              if (current.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                for (var row = 0; row < 2; row++)
-                                  if (row * ((current.length + 1) ~/ 2) <
-                                      current.length)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Row(
-                                        children: [
-                                          for (final event
-                                              in current
-                                                  .skip(
-                                                    row *
-                                                        ((current.length + 1) ~/
-                                                            2),
-                                                  )
-                                                  .take(
-                                                    (current.length + 1) ~/ 2,
-                                                  ))
-                                            Semantics(
-                                              label:
-                                                  '${event['name']}：${event['taken'] == null ? '未服用' : '已服用'}',
-                                              child: Container(
-                                                width: 13,
-                                                height: 13,
-                                                margin: const EdgeInsets.only(
-                                                  right: 10,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  color: event['taken'] == null
-                                                      ? _navy
-                                                      : const Color(0xFFC4CDD4),
-                                                ),
-                                              ),
+                                child: Row(
+                                  children: List.generate(4, (column) {
+                                    final slot = row * 4 + column;
+                                    final matches = current.where(
+                                      (event) => event['slot'] == slot,
+                                    );
+                                    final event = matches.isEmpty
+                                        ? null
+                                        : matches.first;
+                                    final taken = event?['taken'] != null;
+                                    final color = event == null
+                                        ? const Color(0xFFE9EEF1)
+                                        : taken
+                                        ? _navy
+                                        : const Color(0xFFC4CDD4);
+                                    final state = event == null
+                                        ? '空药格'
+                                        : taken
+                                        ? '已服用'
+                                        : '未服用';
+                                    return Expanded(
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Semantics(
+                                          label: '${slot + 1}号药格：$state',
+                                          child: Container(
+                                            width: 15,
+                                            height: 15,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: color,
                                             ),
-                                        ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                              ] else
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    '此时段没有待服用任务',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: _muted,
-                                    ),
-                                  ),
+                                    );
+                                  }),
                                 ),
-                            ],
+                              );
+                            }),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -759,74 +743,112 @@ class _TodayPageState extends State<TodayPage> {
                     ),
                   ),
                 Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.only(
-                      top: times.isEmpty ? 16 : 0,
-                      bottom: 28,
-                    ),
+                  child: Stack(
                     children: [
-                      LayoutBuilder(
-                        builder: (context, constraints) => Column(
-                          children: List.generate(8, (slot) {
-                            final matches = current
-                                .where((e) => e['slot'] == slot)
-                                .toList();
-                            final e = matches.isEmpty ? null : matches.first;
-                            final planned = widget.store.plan
-                                .where((e) => e['slot'] == slot)
-                                .toList();
-                            final name =
-                                e?['name'] ??
-                                (planned.isEmpty
-                                    ? '未设置药品'
-                                    : planned.first['name']);
-                            final preview =
-                                e == null &&
-                                planApplies &&
-                                planned.isNotEmpty &&
-                                (planned.first['times'] as List).contains(
-                                  selected,
+                      ListView(
+                        padding: EdgeInsets.only(
+                          top: times.isEmpty ? 16 : 0,
+                          bottom: 28,
+                        ),
+                        children: [
+                          LayoutBuilder(
+                            builder: (context, constraints) => Column(
+                              children: List.generate(8, (slot) {
+                                final matches = current
+                                    .where((e) => e['slot'] == slot)
+                                    .toList();
+                                final e = matches.isEmpty
+                                    ? null
+                                    : matches.first;
+                                final planned = widget.store.plan
+                                    .where((e) => e['slot'] == slot)
+                                    .toList();
+                                final name =
+                                    e?['name'] ??
+                                    (planned.isEmpty
+                                        ? '未设置药品'
+                                        : planned.first['name']);
+                                final preview =
+                                    e == null &&
+                                    planApplies &&
+                                    planned.isNotEmpty &&
+                                    (planned.first['times'] as List).contains(
+                                      selected,
+                                    );
+                                if (e == null && !preview) {
+                                  return const SizedBox.shrink();
+                                }
+                                final taken = e?['taken'] != null;
+                                final text = e == null
+                                    ? preview
+                                          ? '$name，${boxNames[slot]}${slot + 1}号药格。这个时间在今天的安排启用之前，仅供查看，无需补服。'
+                                          : '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
+                                    : '${e['name']}，${boxNames[slot]}${slot + 1}号药格，${e['dose']}，${e['method']}。${taken ? '本次已确认服用，请勿重复服用。' : ''}';
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: DoseTile(
+                                    key: ValueKey(
+                                      '${e?['id'] ?? slot}/$selected',
+                                    ),
+                                    slot: slot,
+                                    name: name,
+                                    dose: e?['dose'],
+                                    inactiveLabel: preview
+                                        ? '安排启用前 · 仅供查看'
+                                        : null,
+                                    taken: taken,
+                                    scheduled: e != null,
+                                    takenTime: taken
+                                        ? clockText(
+                                            DateTime.parse(e!['taken']).hour *
+                                                    60 +
+                                                DateTime.parse(
+                                                  e['taken'],
+                                                ).minute,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      if (taken) {
+                                        tts.stop();
+                                        showVitalsSheet(
+                                          context,
+                                          widget.store,
+                                          e!,
+                                        );
+                                      } else {
+                                        speak(text);
+                                      }
+                                    },
+                                    onHold: e == null ? null : () => mark(e),
+                                  ),
                                 );
-                            if (e == null && !preview) {
-                              return const SizedBox.shrink();
-                            }
-                            final taken = e?['taken'] != null;
-                            final text = e == null
-                                ? preview
-                                      ? '$name，${boxNames[slot]}${slot + 1}号药格。这个时间在今天的安排启用之前，仅供查看，无需补服。'
-                                      : '${boxNames[slot]}${slot + 1}号药格，本次不用服用。'
-                                : '${e['name']}，${boxNames[slot]}${slot + 1}号药格，${e['dose']}，${e['method']}。${taken ? '本次已确认服用，请勿重复服用。' : ''}';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: DoseTile(
-                                key: ValueKey('${e?['id'] ?? slot}/$selected'),
-                                slot: slot,
-                                name: name,
-                                dose: e?['dose'],
-                                inactiveLabel: preview ? '安排启用前 · 仅供查看' : null,
-                                taken: taken,
-                                scheduled: e != null,
-                                takenTime: taken
-                                    ? clockText(
-                                        DateTime.parse(e!['taken']).hour * 60 +
-                                            DateTime.parse(e['taken']).minute,
-                                      )
-                                    : null,
-                                onTap: () {
-                                  if (taken) {
-                                    tts.stop();
-                                    showVitalsSheet(context, widget.store, e!);
-                                  } else {
-                                    speak(text);
-                                  }
-                                },
-                                onHold: e == null ? null : () => mark(e),
+                              }),
+                            ),
+                          ),
+                          _note('已确认表示手动确认，不代表药箱检测结果。'),
+                        ],
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: 34,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Theme.of(context).scaffoldBackgroundColor,
+                                  Theme.of(context).scaffoldBackgroundColor
+                                      .withValues(alpha: 0),
+                                ],
                               ),
-                            );
-                          }),
+                            ),
+                          ),
                         ),
                       ),
-                      _note('已确认表示手动确认，不代表药箱检测结果。'),
                     ],
                   ),
                 ),
@@ -914,109 +936,126 @@ class _DoseTileState extends State<DoseTile>
           duration: const Duration(milliseconds: 220),
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: 132),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 23),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(28),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact =
-                  constraints.maxWidth < 260 ||
-                  MediaQuery.textScalerOf(context).scale(16) > 22;
-              final content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${widget.slot + 1} 号药格',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: foreground,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.name,
-                    style: TextStyle(
-                      fontSize: 22,
-                      height: 1.4,
-                      fontWeight: FontWeight.w700,
-                      color: foreground,
-                    ),
-                  ),
-                  if (widget.taken && widget.takenTime != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.takenTime!,
-                      style: TextStyle(fontSize: 13, color: foreground),
-                    ),
-                  ],
-                  if (!widget.taken) ...[
-                    const SizedBox(height: 7),
-                    Text(
-                      widget.scheduled
-                          ? widget.dose!
-                          : widget.inactiveLabel ?? '本次不用服用',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: foreground,
-                        height: 1.6,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: hold,
+                  builder: (context, _) => FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: hold.value,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          stops: const [0, 0.82, 1],
+                          colors: [
+                            widget.taken
+                                ? _dots[widget.slot]
+                                : const Color(0xFFE6EEF2),
+                            widget.taken
+                                ? _dots[widget.slot]
+                                : const Color(0xFFE6EEF2),
+                            (widget.taken
+                                    ? _dots[widget.slot]
+                                    : const Color(0xFFE6EEF2))
+                                .withValues(alpha: 0),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ],
-              );
-              final pill = Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: widget.taken ? Colors.white54 : Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  widget.taken
-                      ? CupertinoIcons.checkmark
-                      : CupertinoIcons.speaker_2_fill,
-                  color: widget.taken
-                      ? const Color(0xFF9DA8B1)
-                      : Colors.black87,
-                  size: 30,
-                ),
-              );
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (compact) ...[
-                    content,
-                    const SizedBox(height: 14),
-                    pill,
-                  ] else
-                    Row(
-                      children: [
-                        Expanded(child: content),
-                        const SizedBox(width: 18),
-                        pill,
-                      ],
-                    ),
-                  AnimatedBuilder(
-                    animation: hold,
-                    builder: (_, _) => hold.value == 0
-                        ? const SizedBox.shrink()
-                        : Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: LinearProgressIndicator(
-                              value: hold.value,
-                              color: Colors.white,
-                              backgroundColor: Colors.white24,
-                              minHeight: 4,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 23,
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact =
+                        constraints.maxWidth < 260 ||
+                        MediaQuery.textScalerOf(context).scale(16) > 22;
+                    final content = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${widget.slot + 1} 号药格',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: foreground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.name,
+                          style: TextStyle(
+                            fontSize: 22,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                            color: foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          widget.taken
+                              ? widget.takenTime ?? ' '
+                              : widget.scheduled
+                              ? widget.dose!
+                              : widget.inactiveLabel ?? '本次不用服用',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: foreground,
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    );
+                    final pill = Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: widget.taken ? Colors.white54 : Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        widget.taken
+                            ? CupertinoIcons.checkmark
+                            : CupertinoIcons.speaker_2_fill,
+                        color: widget.taken
+                            ? const Color(0xFF9DA8B1)
+                            : Colors.black87,
+                        size: 30,
+                      ),
+                    );
+                    return compact
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              content,
+                              const SizedBox(height: 14),
+                              pill,
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(child: content),
+                              const SizedBox(width: 18),
+                              pill,
+                            ],
+                          );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -72,12 +72,12 @@ void main() {
       isNot(const Color(0xFFE8E9EB)),
     );
     final titleTop = tester.getTopLeft(find.text('今日用药')).dy;
-    final progressTop = tester.getTopLeft(find.text('吃药进度 0/0')).dy;
+    final editTop = tester.getTopLeft(find.byTooltip('编辑每日用药计划')).dy;
     final firstTileTop = tester.getTopLeft(tiles.first).dy;
     await tester.drag(tiles.first, const Offset(0, -120));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('今日用药')).dy, titleTop);
-    expect(tester.getTopLeft(find.text('吃药进度 0/0')).dy, progressTop);
+    expect(tester.getTopLeft(find.byTooltip('编辑每日用药计划')).dy, editTop);
     expect(tester.getTopLeft(tiles.first).dy, lessThan(firstTileTop));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -292,19 +292,26 @@ void main() {
     'short tap speaks, incomplete hold cancels, full hold confirms once',
     (tester) async {
       int taps = 0, holds = 0;
+      var taken = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 180,
-              child: DoseTile(
-                slot: 0,
-                name: '测试药',
-                dose: '1片',
-                taken: false,
-                scheduled: true,
-                onTap: () => taps++,
-                onHold: () => holds++,
+              child: StatefulBuilder(
+                builder: (context, setState) => DoseTile(
+                  slot: 0,
+                  name: '很长很长的测试药品名称',
+                  dose: '每次 10ml',
+                  takenTime: taken ? '12:11' : null,
+                  taken: taken,
+                  scheduled: true,
+                  onTap: () => taps++,
+                  onHold: () {
+                    holds++;
+                    setState(() => taken = !taken);
+                  },
+                ),
               ),
             ),
           ),
@@ -315,17 +322,22 @@ void main() {
       await tester.pump();
       expect(taps, 1);
       expect(holds, 0);
+      final restingHeight = tester.getSize(target).height;
       var gesture = await tester.startGesture(tester.getCenter(target));
       await tester.pump(const Duration(milliseconds: 700));
+      expect(tester.getSize(target).height, restingHeight);
       await gesture.up();
       await tester.pump();
+      expect(tester.getSize(target).height, restingHeight);
       expect(holds, 0);
       gesture = await tester.startGesture(tester.getCenter(target));
       await tester.pump(const Duration(milliseconds: 550));
       await tester.pump(const Duration(milliseconds: 700));
       expect(holds, 1);
+      expect(tester.getSize(target).height, restingHeight);
       await gesture.up();
       await tester.pump();
+      expect(tester.getSize(target).height, restingHeight);
       expect(taps, 1);
     },
   );
